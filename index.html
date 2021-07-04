@@ -1,0 +1,199 @@
+<html lang="en">
+<head>
+<meta charset="utf-8">
+    <link href="https://fonts.googleapis.com/css?family=Noto+Sans" rel="stylesheet">
+<style>
+* {
+    font-family: 'Noto Sans', sans-serif;
+    font-weight: 900;
+}
+table {
+    width:98vh;
+    height:98vh;
+    z-index: 2;
+}
+td {
+    border-radius: 10px;
+    border:1px solid #333;
+    text-align: center;
+    font-size:80px;
+    width:19vh;
+    /*height:19vh;*/
+}
+td {
+    background: rgba(203,226,216,1);
+    background: radial-gradient(ellipse at center, rgba(203,226,216,1) 0%, rgba(196,219,184,0) 100%);
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#cbe2d8', endColorstr='#c4dbb8', GradientType=1 );
+}
+button {
+    clear: right;
+    display: block;
+    min-width: 40px;
+    border-radius: 5px;
+    padding: 5px;
+    margin: 5px;
+}
+button:focus {outline:0;}
+#text {
+    position: fixed;
+    bottom: 10px;
+    left: 10px;
+    color: rgba(100,100,100,0.4);
+    width: 20vh;
+    text-align: justify;
+}
+#words {
+    position: fixed;
+    right:0;
+    top:0;
+
+}
+#text a {
+    color: rgba(100,100,100,0.7);
+}
+#board {
+}
+
+</style>
+<script type="text/javascript">
+function shuffle(array) {
+  let currentIndex = array.length
+    , temporaryValue
+    , randomIndex
+    ;
+
+  while (0 !== currentIndex) {
+
+    randomIndex = Math.floor(Math.random() * currentIndex);
+    currentIndex -= 1;
+
+    temporaryValue = array[currentIndex];
+    array[currentIndex] = array[randomIndex];
+    array[randomIndex] = temporaryValue;
+  }
+
+}
+
+const languages = {
+    spa: [5, 5, 0, 'MTGAOYURODÓCAECLTLROIEFCCNZNUEÉTSLDQEEAENAOJNDCEPEIYALVIEUDSTNASEMRARMOAIOLLTAPORASODEAOQOÚESANSTEAAREAINSNRMEAUODALEPÁCACNXSÍEBDKSTSSULSPEIIMEIÑNEEHI'],
+    rus: [5, 5, 0, 'ЖАДАЧАОНБЬИГЫМЩПТЁАУАООИКЬЛВМЯПФИИПНЙЬЛОУКВЕГСРЕЛОЕГДЙЯАИИОЦТТСЛСООАЕЫЧЮИЗОЕЖЕТНЪАНЛОНСАВНСРРЛИЕБЭТШОВВРАЕАЕПМТОТОАСШБКОЕВНУРХРЛЯУРЗОКДСКРЕНХИЧНИОДЛМТ'],
+    pol: [5, 5, 0, 'ODCNAAURSZSOKBZTAĘĘUZEYGOELSWCÓTZJTŚKAŁOZAENERIHALCŁMIMRDYŻZPTAĆĆOBIDINENPNISAINWŁUMYLAGKŁUŃBJDRIYĘZOJZINZYISNKEŻJPOOŚĄTEEMSWŹOWHAOEKWEGPFCCOEIAIĄERAI'],
+    eng: [5, 5, 0, 'SOTHEEAAAMRHIEOSOJAGUSTFWEQHGAAOTITNIEYVDRIEDHASCINTDZRXTOECIEKNSOREIARIAEORENNAOWLOPKSPHNEESCPGSLVMTASLEDWRFTLOORFNMEFETTTYHTHGENUEECRELTBYAABBUDUMNH'],
+    afr: [5, 5, 0, 'IHKHROIEIJEZSECNEAARGALIADFLWNWWYODLDKTNSLIKEGRREUREEEOSTRNVOLSSMGTEEEUEEATESEPLRDDRVNEPMMENTTNNEETNAEUIDEKOIOSUSOASVEAVYYDBPFIAGBGRTDAEAAWNONNIBIHOIM'],
+    ukr: [5, 5, 0, 'РТВЗТЖАІОНОТТНФЬВИЮОХБАРЕТОЛНЕЬЕАМЙЄАМПИЛРПІАЛАВРТВЯОЕДАЕАЕССЙВТТИОШИУДОСШУОДУПСХЮАОКІЕЯРВМТНОНААГЯДИЛКОСБОНИИКРҐИГЗЗГЦЧИЙЬСНЗДАЩЕОЕЧМЛПЦІКЖННУОЕОМБЇЧ'],
+    // wieksze
+    pol6: [6, 6, 0, 'OĆGZJAÓZGŻSKGIMNIJĆECKPYSKPWZISILLIYŁAŁŁEUCTRŃEMIAGROSCOENŁEMKOONIŁEEDBHYTLOZIESIFIZAINUIPTPSNCUDOTAISAĘKJYKAIALĄEMNMRCEIRAŁPALWZZTYWRIOMWRMZÓCBAIOWRONZENZESJAPDAAĘCŚBAĄOYUEEESAWOZONZYWŚĄAĘHŹDDUŁDPŻAZTOŚJBIŻTNNOERĘHE'],
+    pol7: [7, 7, 0, 'YBNŁYRKĘOŁASSSOEŚZĄWBĘGDŁREZDŁSMCĆCEHPOGBTPIOÓWEIEATEIRUDNOWATIIHZAWKINWCKNKMJEAUĄEIMYGNOORPIWOĘIDCDNAOOZŃNAIMMĘDSIEOEOUZERKBIHMNŻEŚIEŁKIŻWUSOHGONEOĄZKIZTFEUAŻDDZTCLLAIZCĘZIZKEAZWPANAALPRBJASCACPDYOLŁRŻAZEŁZUOPASNŹMANIAIYYJJZŚIEŁSRETRGEWCTNOSZOŚCZGNIYRÓIAYJAAYEOMNLITJŁWĄĘĆJOIYMSEAPLZRUIESTTAAS'],
+
+    eng55: [5, 5, 37.68, 'MWOPTMYSEGRHATRSHWNEGEFOITOTREXDNGHHISDCBLEISCOTEERRANEHSATLYWEAZFELNNQEYSNATRNBOVSEATPLLTJOADHMRECUNTIMSGETDTUHAOOKETEAAKDANUHFERIIOOPIREFCOISBEVAUEA'],
+    pol55: [5, 5, 11.6, 'SZZŚUJGMUŹAIJREJFIKŁENISNTOŻĄKINŃZTTAIAEEALNAZUIKIEEAZNONTCZOBĆLCASIODODSĆRRMWOOĘOŁEPDHÓTYĘCWZBIRCAIANNODWUŁKOPĄESAYŚHŻCWEREMGYOZPIPYZKĘMIABGEWEYASLJŁ'],
+    spa55: [5, 5, 45.32, 'ÁIREÍUETMOACAOAXCIPLJAÍLQEPAAACQZGEAPSNESLÉINÑTENERSBUOSEONLKISDYNEARNAEAICDRAEUAENDTUAFYEIALIOSNCLIRASDRVROCRTSTOOMWARDÜUEDSSRNOUALOOÓLBOEHEENDMHÚEAL'],
+    eng66: [6, 6, 79.9, 'OETOUEPQTALLTOURBEULHRNEFMEOWLCVTNOOEHEYIORHBARHOSISOTAIGESIVHVKOEHEFNTOHGREMTRTPAGATSTIHTEEAEREYNDTMRCDUANANASDEYEERSADENRLODFESWSNRWTHOEFMSACEXPSBFBAOISENIENARUCHLRAPUEATNDZKGHMEIEANNIIOAWTWAMJSDRTONIELCTYGDESTIWLT'],
+    pol66: [6, 6, 19.5, 'OĆGZJAÓZGŻSKGIMNIJĆECKPYSKPWZISILLIYŁAŁŁEUCTRŃEMIAGROSCOENŁEMKOONIŁEEDBHYTLOZIESIFIZAINUIPTPSNCUDOTAISAĘKJYKAIALĄEMNMRCEIRAŁPALWZZTYWRIOMWRMZÓCBAIOWRONZENZESJAPDAAĘCŚBAĄOYUEEESAWOZONZYWŚĄAĘHŹDDUŁDPŻAZTOŚJBIŻTNNOERĘHE'],
+    spa66: [6, 6, 84.74, 'LLQCMSUHRDESLCIÓBORAURXUOODUNNUOOADLGNQJAOLMAAAMATOEÚÍSMLNANALADNESEÓLSKDFÉDSONZASCSÑTNAARRRLAEUDESEIEOJTOCANGPUOEYADSIRFUAAEATTTSBLCPRRINDSEEAEIAROAOISVHQAAAÁEOPAILNPLDÍEÜOLRPCERVAOEMERSTEYNCNIADORUTISEIEENEWEIEBOCE'],
+    spa77: [7, 7, 151.56, 'OISASTOPEZEEECPOAOONEOATAERLAEAOLLLNUNEADÑITTEDTYAUUOCIRDDEZIHNARTIAOBDDDNOSLSMÍCAMLARAGAVNOOUIROEURSRALWEQAÍRENÜTCLNAOSRELTIESNCENDDIOLCEOEMNCNRLAARDCLBRSVYAPOEOSÓESDLPÉURIQÓETAASLRSEAMETULALAEEDSIPNANEEDRRROURAÓBEEBEADAÍIRCÁMNCAXYIOENÚSFOSENVCJIJHAAAEINPUGSKBFAEOONCAISSPIENUTOSSUEMOAULHALDMA'],
+};
+let board = function(language) {
+    let gridstring = '';
+    let [x, y, score, s] = languages[language];
+    let dice = s.match(/.{1,6}/g);
+    shuffle(dice);
+    console.log(dice);
+    const board_len = x;
+    let html = '<table>';
+
+    for (i in dice) {
+        if (i % board_len == 0) {
+            html += '<tr>';
+        }
+        html += '<td>';
+        let litera = Math.floor((Math.random()*6));
+        html += (dice[i][litera]);
+        gridstring += (dice[i][litera]);
+        html += '</td>';
+        if (i % board_len == board_len -1) {
+            html += '</tr>';
+            gridstring += ' ';
+        }
+
+    }
+    html += '</table>';
+    document.getElementById('board').innerHTML = html;
+    var elements = document.body.getElementsByTagName('button');
+
+    for (var i = 0; i < elements.length; i++) {
+        elements[i].style.backgroundColor = 'white';
+
+    }
+    document.getElementById(language).style.backgroundColor = 'rgba(1,1,1,0.3)';
+    console.log('gridstring', gridstring);
+    let xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState == XMLHttpRequest.DONE && solverAvailable) {
+            document.getElementById('words').innerHTML = xhr.responseText;
+           // alert(xhr.responseText);
+        }
+    }
+    xhr.open('GET', `http://localhost:8080/solver/${language}/${gridstring}`, true);
+    xhr.send(null);
+
+};
+function addOnLoadEvent(func) {
+    if (window.addEventListener) {window.addEventListener('load', func, false);}
+    else if (window.attachEvent) {window.attachEvent('onload', func);}
+}
+let solverAvailable=false;
+function UrlExists(url, callback)
+{
+    let http = new XMLHttpRequest();
+    http.open('HEAD', url);
+    http.onreadystatechange = function() {
+        if (this.readyState == this.DONE) {
+            solverAvailable = true;
+            console.log('solverAvailable')
+        }
+    };
+    http.send();
+}
+
+UrlExists('http://localhost:8080/solver', console.log);
+
+addOnLoadEvent(function() {board('eng')});
+</script>
+<title>boggle</title>
+</head>
+<body>
+<div style="position: fixed; height:100px;" class="ciski">
+
+    5x5
+    <button onclick="board('eng55')">eng</button>
+    <button onclick="board('pol55')">pol</button>
+    <button onclick="board('spa55')">spa</button>
+
+    6x6
+    <button onclick="board('eng66')">eng</button>
+    <button onclick="board('pol66')">pol</button>
+    <button onclick="board('spa66')">spa</button>
+<!--    7x7-->
+<!--    <button onclick="board('spa77')">spa</button>-->
+    stare
+    <button onclick="board('spa')" id="spa">spa</button>
+    <button onclick="board('pol')" id="pol">pol</button>
+    <button onclick="board('eng')" id="eng">eng</button>
+    <button onclick="board('rus')" id="rus">rus</button>
+    <button onclick="board('afr')" id="afr">Afrikaans</button>
+    <button onclick="board('ukr')" id="ukr">украї́нська мо́ва</button>
+</div>
+<center>
+    <div id="board"></div>
+</center>
+<div id="words">click to get words</div>
+<div id="text">
+    This is a board for a game of <a href="https://en.wikipedia.org/wiki/Boggle">Boggle</a>.
+    It only displays the board, you will need pencil and paper and a bunch of friends to play,
+    this is not an on-line game.
+</div>
+</body>
+</html>
+
+
