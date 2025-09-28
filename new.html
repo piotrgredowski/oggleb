@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boggle Board Animation</title>
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: #f0f0f0;
+    font-family: sans-serif;
+  }
+  #board {
+    display: grid;
+    grid-template-columns: repeat(4, 80px);
+    grid-template-rows: repeat(4, 80px);
+    gap: 10px;
+    perspective: 600px;
+  }
+  .dice {
+    width: 80px;
+    height: 80px;
+    background: #fff;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    font-weight: bold;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transform-style: preserve-3d;
+    cursor: pointer;
+    position: relative;
+  }
+  .rolling {
+    animation: roll 0.8s infinite;
+  }
+  @keyframes roll {
+    0% { transform: rotateX(0deg) rotateY(0deg); }
+    25% { transform: rotateX(180deg) rotateY(0deg); }
+    50% { transform: rotateX(180deg) rotateY(180deg); }
+    75% { transform: rotateX(0deg) rotateY(180deg); }
+    100% { transform: rotateX(0deg) rotateY(0deg); }
+  }
+</style>
+</head>
+<body>
+
+<div id="board"></div>
+
+<script>
+const diceLetters = [
+  ['A','A','E','E','G','N'],
+  ['E','L','R','T','T','Y'],
+  ['A','O','O','T','T','W'],
+  ['A','B','B','J','O','O'],
+  ['E','H','R','T','V','W'],
+  ['C','I','M','O','T','U'],
+  ['D','I','S','T','T','Y'],
+  ['E','I','O','S','S','T'],
+  ['D','E','L','R','V','Y'],
+  ['A','C','H','O','P','S'],
+  ['H','I','M','N','QU','U'],
+  ['E','E','I','N','S','U'],
+  ['E','E','G','H','N','W'],
+  ['A','F','F','K','P','S'],
+  ['H','L','N','N','R','Z'],
+  ['D','E','I','L','R','X']
+];
+
+// Shuffle dice
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function getRandomLetter(die) {
+  return die[Math.floor(Math.random() * die.length)];
+}
+
+const board = document.getElementById('board');
+const shuffledDice = shuffle([...diceLetters]);
+
+// Create dice elements and animate rolling
+shuffledDice.forEach((die, index) => {
+  const diceEl = document.createElement('div');
+  diceEl.className = 'dice rolling';
+  board.appendChild(diceEl);
+
+  // Random falling delay
+  setTimeout(() => {
+    diceEl.classList.remove('rolling');
+    diceEl.textContent = getRandomLetter(die);
+  }, 500 + index * 200); // stagger falling effect
+});
+</script>
+
+</body>
+</html>
+
