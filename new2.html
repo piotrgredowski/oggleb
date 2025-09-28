@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boggle Board with Timer</title>
+<style>
+  /* Base styles */
+  body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    font-family: sans-serif;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  #board {
+    display: grid;
+    grid-template-columns: repeat(4, 80px);
+    grid-template-rows: repeat(4, 80px);
+    gap: 12px;
+    perspective: 600px;
+    margin-bottom: 20px;
+  }
+
+  .dice {
+    width: 80px;
+    height: 80px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    font-weight: bold;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    transform-style: preserve-3d;
+    cursor: pointer;
+    position: relative;
+    transition: background 0.3s, color 0.3s, box-shadow 0.3s;
+  }
+
+  .rolling {
+    animation: roll 0.8s infinite;
+  }
+
+  @keyframes roll {
+    0% { transform: rotateX(0deg) rotateY(0deg); }
+    25% { transform: rotateX(180deg) rotateY(0deg); }
+    50% { transform: rotateX(180deg) rotateY(180deg); }
+    75% { transform: rotateX(0deg) rotateY(180deg); }
+    100% { transform: rotateX(0deg) rotateY(0deg); }
+  }
+
+  #timer {
+    font-size: 2rem;
+    font-weight: bold;
+  }
+
+  /* Light mode (default) */
+  body {
+    background: #f0f0f0;
+    color: #000;
+  }
+
+  .dice {
+    background: #fff;
+    color: #333;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+  }
+
+  /* Dark mode */
+  @media (prefers-color-scheme: dark) {
+    body {
+      background: #121212;
+      color: #fff;
+    }
+
+    .dice {
+      background: #1f1f1f;
+      color: #ffeb3b;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    }
+
+    #timer {
+      color: #ffeb3b;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="board"></div>
+<div id="timer">03:00</div>
+
+<script>
+const diceLetters = [
+  ['A','A','E','E','G','N'],
+  ['E','L','R','T','T','Y'],
+  ['A','O','O','T','T','W'],
+  ['A','B','B','J','O','O'],
+  ['E','H','R','T','V','W'],
+  ['C','I','M','O','T','U'],
+  ['D','I','S','T','T','Y'],
+  ['E','I','O','S','S','T'],
+  ['D','E','L','R','V','Y'],
+  ['A','C','H','O','P','S'],
+  ['H','I','M','N','QU','U'],
+  ['E','E','I','N','S','U'],
+  ['E','E','G','H','N','W'],
+  ['A','F','F','K','P','S'],
+  ['H','L','N','N','R','Z'],
+  ['D','E','I','L','R','X']
+];
+
+// Shuffle dice
+function shuffle(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
+function getRandomLetter(die) {
+  return die[Math.floor(Math.random() * die.length)];
+}
+
+const board = document.getElementById('board');
+const timerEl = document.getElementById('timer');
+const shuffledDice = shuffle([...diceLetters]);
+
+let maxDelay = 0;
+
+// Create dice elements and animate rolling
+shuffledDice.forEach((die, index) => {
+  const diceEl = document.createElement('div');
+  diceEl.className = 'dice rolling';
+  board.appendChild(diceEl);
+
+  const delay = 500 + index * 200; // stagger falling
+  maxDelay = Math.max(maxDelay, delay);
+
+  setTimeout(() => {
+    diceEl.classList.remove('rolling');
+    diceEl.textContent = getRandomLetter(die);
+  }, delay);
+});
+
+// Start timer after all dice finished rolling
+setTimeout(() => {
+  let timeLeft = 180; // 3 minutes in seconds
+  timerEl.textContent = formatTime(timeLeft);
+
+  const timerInterval = setInterval(() => {
+    timeLeft--;
+    timerEl.textContent = formatTime(timeLeft);
+
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      timerEl.textContent = "00:00";
+    }
+  }, 1000);
+}, maxDelay + 200);
+
+// Helper function to format seconds as MM:SS
+function formatTime(seconds) {
+  const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+  const s = (seconds % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+</script>
+
+</body>
+</html>
+
