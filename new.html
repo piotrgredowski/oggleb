@@ -3,36 +3,38 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Boggle Board Animation</title>
+<title>Boggle Board Dark Mode</title>
 <style>
   body {
     display: flex;
     justify-content: center;
     align-items: center;
     height: 100vh;
-    background: #f0f0f0;
+    background: #121212; /* dark background */
     font-family: sans-serif;
+    color: #fff;
   }
   #board {
     display: grid;
     grid-template-columns: repeat(4, 80px);
     grid-template-rows: repeat(4, 80px);
-    gap: 10px;
+    gap: 12px;
     perspective: 600px;
   }
   .dice {
     width: 80px;
     height: 80px;
-    background: #fff;
+    background: #1f1f1f; /* dark dice color */
     border-radius: 10px;
     display: flex;
     justify-content: center;
     align-items: center;
     font-size: 2rem;
     font-weight: bold;
-    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
     transform-style: preserve-3d;
     cursor: pointer;
+    color: #ffeb3b; /* bright text */
     position: relative;
   }
   .rolling {
