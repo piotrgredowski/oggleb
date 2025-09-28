@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boggle Multi-Language Board</title>
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: sans-serif;
+    margin: 20px;
+    transition: background 0.3s, color 0.3s;
+  }
+
+  #board {
+    display: grid;
+    gap: 12px;
+    perspective: 600px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+  }
+
+  .dice {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    transform-style: preserve-3d;
+    cursor: pointer;
+    transition: background 0.3s, color 0.3s, box-shadow 0.3s;
+    background: #fff;
+    color: #333;
+  }
+
+  .rolling {
+    animation: roll 0.8s infinite;
+  }
+
+  @keyframes roll {
+    0% { transform: rotateX(0deg) rotateY(0deg); }
+    25% { transform: rotateX(180deg) rotateY(0deg); }
+    50% { transform: rotateX(180deg) rotateY(180deg); }
+    75% { transform: rotateX(0deg) rotateY(180deg); }
+    100% { transform: rotateX(0deg) rotateY(0deg); }
+  }
+
+  #timer {
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+
+  button {
+    padding: 8px 16px;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    transition: background 0.3s;
+  }
+
+  button:hover {
+    background-color: #0056b3;
+  }
+
+  /* Dark mode */
+  @media (prefers-color-scheme: dark) {
+    body { background: #121212; color: #fff; }
+    .dice { background: #1f1f1f; color: #ffeb3b; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+    #timer { color: #ffeb3b; }
+    select { background: #1f1f1f; color: #ffeb3b; }
+    button { background-color: #1a73e8; color: #fff; }
+    button:hover { background-color: #135ac2; }
+  }
+</style>
+</head>
+<body>
+
+<h1>Boggle Board</h1>
+
+<label for="language">Choose version:</label>
+<select id="language"></select>
+
+<div id="board"></div>
+<div id="timer">03:00</div>
+<button id="reshuffleBtn">Reshuffle</button>
+
+<script>
+const languages = {
+    spa: [5, 5, 0, 'MTGAOYURODÓCAECLTLROIEFCCNZNUEÉTSLDQEEAENAOJNDCEPEIYALVIEUDSTNASEMRARMOAIOLLTAPORASODEAOQOÚESANSTEAAREAINSNRMEAUODALEPÁCACNXSÍEBDKSTSSULSPEIIMEIÑNEEHI'],
+    rus: [5, 5, 0, 'ЖАДАЧАОНБЬИГЫМЩПТЁАУАООИКЬЛВМЯПФИИПНЙЬЛОУКВЕГСРЕЛОЕГДЙЯАИИОЦТТСЛСООАЕЫЧЮИЗОЕЖЕТНЪАНЛОНСАВНСРРЛИЕБЭТШОВВРАЕАЕПМТОТОАСШБКОЕВНУРХРЛЯУРЗОКДСКРЕНХИЧНИОДЛМТ'],
+    pol: [5, 5, 0, 'ODCNAAURSZSOKBZTAĘĘUZEYGOELSWCÓTZJTŚKAŁOZAENERIHALCŁMIMRDYŻZPTAĆĆOBIDINENPNISAINWŁUMYLAGKŁUŃBJDRIYĘZOJZINZYISNKEŻJPOOŚĄTEEMSWŹOWHAOEKWEGPFCCOEIAIĄERAI'],
+    eng: [5, 5, 0, 'SOTHEEAAAMRHIEOSOJAGUSTFWEQHGAAOTITNIEYVDRIEDHASCINTDZRXTOECIEKNSOREIARIAEORENNAOWLOPKSPHNEESCPGSLVMTASLEDWRFTLOORFNMEFETTTYHTHGENUEECRELTBYAABBUDUMNH'],
+    pol6: [6, 6, 0, 'OĆGZJAÓZGŻSKGIMNIJĆECKPYSKPWZISILLIYŁAŁŁEUCTRŃEMIAGROSCOENŁEMKOONIŁEEDBHYTLOZIESIFIZAINUIPTPSNCUDOTAISAĘKJYKAIALĄEMNMRCEIRAŁPALWZZTYWRIOMWRMZÓCBAIOWRONZENZESJAPDAAĘCŚBAĄOYUEEESAWOZONZYWŚĄAĘHŹDDUŁDPŻAZTOŚJBIŻTNNOERĘHE'],
+    pol7: [7, 7, 0, 'YBNŁYRKĘOŁASSSOEŚZĄWBĘGDŁREZDŁSMCĆCEHPOGBTPIOÓWEIEATEIRUDNOWATIIHZAWKINWCKNKMJEAUĄEIMYGNOORPIWOĘIDCDNAOOZŃNAIMMĘDSIEOEOUZERKBIHMNŻEŚIEŁKIŻWUSOHGONEOĄZKIZTFEUAŻDDZTCLLAIZCĘZIZKEAZWPANAALPRBJASCACPDYOLŁRŻAZEŁZUOPASNŹMANIAIYYJJZŚIEŁSRETRGEWCTNOSZOŚCZGNIYRÓIAYJAAYEOMNLITJŁWĄĘĆJOIYMSEAPLZRUIESTTAAS'],
+
+    eng44: [4, 4, 17.12, 'HCPTYNBWAHALOFRHBKNOWAQTAXFTSMEALIAERELEHEDRPGGREVNEYTRWETZOATOIFEEDOMNSEIOUEUOIATNTDSSSJHNRSMIC'],
+    pol44: [4, 4, 5.36, 'UIEWNĄICDTOŻOAEKOOIZUPŹYŃDBTTWMJENSNCAGANNERIĘAIIZECZÓIIŁOOYZSĆELAGZZKAŁŻRSYAPHDLWAMRHEMOĘĄBŚŁSF'],
+    spa44: [4, 4, 17.66, 'ÓNSNOSEÑUKAANNEDNTCHXMQINZYFEWAAOÚUASLDURÁEÉDÍTAEIÜOTEAEOOEAOLLDERSRIOPJAVDMAPEARLUCSSRALIBCREOI'],
+    eng55: [5, 5, 48.34, 'OEBLIURBEHIATYTHMOTCHOFECNOYTADHTQVODNAKSBDRSANARTSHENORZADTOHMTNOTEEDEETEESNEIIEGTERAGSPKIALVLHPHSUICELRSEOAIMPGTESNRUEEEAMOWXRFWNENARCJSFAULYIGWAOTF'],
+    pol55: [5, 5, 13.28, 'ZŚOERONTHJBĆGAUIŁPZSŚAISAIŁGLŻSTWEEYAYSĆCYAMKNEWTŁRAEADWZEJĘWNĘBPZAIYEDIINOJIEAREAOMKŻZRIZOIORZŹEIICNSLHMJOUAPCNFEOĘKOEDŁŃUKPZCDOULZĄAÓTMWSCITOYGBKĄNN'],
+    spa55: [5, 5, 49.8, 'HSKOQSÓMECOYESAÚNOUHAÍNOEUNROPNOIEIFLTÉLRJIOVÍASEOCONPEBDCDRCAZIEEIGLABRAÁOEAWLDMRRALXNASAAEAAILYSQTSÑTAEANÜTEDLEUILUUOSLAACDECRSDTRENEMERPNIAREAUSODN'],
+    eng66: [6, 6, 91.3, 'ECRSMIGWNEAUTSOAYTLFANMTEDDBHIMEONEOABIRENGOOFEEHLEADIVOEEOPOASKRRPTMLTRNNRNUIDRMGIESTTREAETRTHWPLINATZEEHPGTLSUICATAXTHFNAECARSECNGSIDECELVTSOBHVESIDEOWESATEALAMAEHSRNUOAROHUHHATIISNOOWJRFOETYQNDDYHENWTERFKLOUYWSETB'],
+    pol66: [6, 6, 22.26, 'CŻIÓBHZIRZSACIIŁPNZWOHAŁWYEANPANAOIPGINFSBWBRLTARRMSEJYOIDZJLNATŁRZDYICŚUONGIĆACETEENĄGMNIAWEAAARAOEUDEYJŚOWAZĘMOZEERIINŹAIDSMOPISEPEZŻAJOYIŁŻĘLŚBTUDKCDMKŁĘMKEAPYNKCEĘIŁMNWÓOZJPUKYUEOOSSZKŁŃACGLISOSEĆTORIZOHZTWZĄTELĄ'],
+    spa66: [6, 6, 98.46, 'SKWDACTLIUOADLVDSERNAEDENEDLYERRONNAAREELOECLSSELASCILIVANIUMOAOGPBÉROINAOEINPOSHFOLRMÓEEIAARÚSORAMARTNAARAEJNBOÜQRSAHEUCPTTELÑSAARPGBDSRNJNNSYEDCETÁREUFSENECEÓAUAAEUOAÍCNDIEADAOLTEÍODTSUCQOAAEIPDOOIITOSAMSEMLUXLUQZL'],
+    spa77: [7, 7, 151.56, 'OISASTOPEZEEECPOAOONEOATAERLAEAOLLLNUNEADÑITTEDTYAUUOCIRDDEZIHNARTIAOBDDDNOSLSMÍCAMLARAGAVNOOUIROEURSRALWEQAÍRENÜTCLNAOSRELTIESNCENDDIOLCEOEMNCNRLAARDCLBRSVYAPOEOSÓESDLPÉURIQÓETAASLRSEAMETULALAEEDSIPNANEEDRRROURAÓBEEBEADAÍIRCÁMNCAXYIOENÚSFOSENVCJIJHAAAEINPUGSKBFAEOONCAISSPIENUTOSSUEMOAULHALDMA'],
+};
+
+// Populate dropdown
+const languageSelect = document.getElementById('language');
+for (let key in languages) {
+    const option = document.createElement('option');
+    option.value = key;
+    option.textContent = key;
+    languageSelect.appendChild(option);
+}
+
+const boardEl = document.getElementById('board');
+const timerEl = document.getElementById('timer');
+const reshuffleBtn = document.getElementById('reshuffleBtn');
+let timerInterval;
+
+function shuffle(array) {
+    for (let i = array.length-1; i>0; i--){
+        const j = Math.floor(Math.random()*(i+1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+function getRandomLetter(die){
+    return die[Math.floor(Math.random()*die.length)];
+}
+
+function formatTime(seconds){
+    const m = Math.floor(seconds/60).toString().padStart(2,'0');
+    const s = (seconds%60).toString().padStart(2,'0');
+    return `${m}:${s}`;
+}
+
+function createBoard(langKey) {
+    clearInterval(timerInterval);
+    timerEl.textContent = '03:00';
+    boardEl.innerHTML = '';
+
+    const [rows, cols, , diceString] = languages[langKey];
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, 60px)`;
+    boardEl.style.gridTemplateRows = `repeat(${rows}, 60px)`;
+
+    // Split string into dice (6 letters each)
+    const dice = [];
+    for(let i=0; i<diceString.length; i+=6){
+        dice.push(diceString.slice(i,i+6));
+    }
+
+    const shuffledDice = shuffle([...dice]);
+    let maxDelay = 0;
+
+    shuffledDice.forEach((dieStr, index) => {
+        const die = dieStr.split('');
+        const diceEl = document.createElement('div');
+        diceEl.className = 'dice rolling';
+        boardEl.appendChild(diceEl);
+
+        const delay = 500 + index * 100;
+        maxDelay = Math.max(maxDelay, delay);
+
+        setTimeout(()=>{
+            diceEl.classList.remove('rolling');
+            diceEl.textContent = getRandomLetter(die);
+        }, delay);
+    });
+
+    // Start timer after last die settled
+    setTimeout(()=>{
+        let timeLeft = 180;
+        timerEl.textContent = formatTime(timeLeft);
+        timerInterval = setInterval(()=>{
+            timeLeft--;
+            timerEl.textContent = formatTime(timeLeft);
+            if(timeLeft <= 0){
+                clearInterval(timerInterval);
+                timerEl.textContent = "00:00";
+            }
+        },1000);
+    }, maxDelay+200);
+}
+
+// Initialize first board
+createBoard(languageSelect.value);
+
+// Change board on selection
+languageSelect.addEventListener('change', e=>{
+    createBoard(e.target.value);
+});
+
+// Reshuffle button
+reshuffleBtn.addEventListener('click', ()=>{
+    createBoard(languageSelect.value);
+});
+</script>
+
+</body>
+</html>
+
