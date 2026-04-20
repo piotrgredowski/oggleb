@@ -17,15 +17,6 @@ Building a multi-language Boggle board game as a single-page HTML app (`index.ht
 - Background image from `bg.png`
 - Footer info text in Polish with z-index:-1, using vw units for zoom independence
 
-## Discoveries
-
-- `file://` protocol blocks `fetch` (CORS) — solved by loading dictionaries as `<script>` tags setting `window.XX_TRIE` globals
-- Polish dictionary (SJP) is 3.2M words → 36MB trie JS file
-- Trie format: `node[char]` for children, `node.$=1` for word marker, leaf node = `1` (number)
-- Russian wordlist from danakt was Windows-1251 encoded, needed `iconv` conversion
-- The board uses single-character dice faces (each die = 6 consecutive chars from an encoded string)
-- Dark mode CSS was overriding background image — needed to include `url('bg.png')` in the dark mode rule too
-
 ## Accomplished
 
 ### Completed:
@@ -45,7 +36,9 @@ Building a multi-language Boggle board game as a single-page HTML app (`index.ht
   - RU: 1.5M words (danakt) → 19MB trie
 - Multi-language UI labels (results headers, word counts, letter labels)
 - `build_trie.js` handles all 4 languages (run with optional arg: `node build_trie.js EN`)
-- Scoring table in sidebar (3-4 letters: 1pt, 5: 2pt, 6: 3pt, 7: 5pt, 8+: 11pt)
+- Scoring table in sidebar (3-4 letters: 1pt, 5: 2pt, 6: 3pt, 7: 5pt, 8+: 11pt) — moved to bottom of sidebar
+- Dropdown cleanup: removed numberless duplicates (pol/eng/spa/rus → renamed to XX55), removed duplicate pol6, renamed pol7→pol77. All entries now consistently named: XX44/XX55/XX66/XX77, sorted by language then size.
+- Fixed timer race condition on rapid language switching: added generation counter + pendingTimeouts tracking to prevent stale setTimeout/setInterval callbacks from firing
 
 ## Relevant files / directories
 
@@ -78,7 +71,19 @@ Building a multi-language Boggle board game as a single-page HTML app (`index.ht
 16. "make the 'pol' first on the dropdown list"
 17. "let's try to add wordlists for other languages" → searched & downloaded EN/ES/RU
 18. "go, do your best" → built all trie files, integrated all languages
-19. "Put small table below the title, explaining the scoring" → DONE
+19. "Put small table below the title, explaining the scoring" → DONE, moved to bottom of sidebar
+20. Dropdown cleanup: removed duplicates, consistent XX44/XX55/XX66/XX77 naming → DONE
+21. Fixed timer race condition on rapid language switching → DONE
+
+## Discoveries
+
+- `file://` protocol blocks `fetch` (CORS) — solved by loading dictionaries as `<script>` tags setting `window.XX_TRIE` globals
+- Polish dictionary (SJP) is 3.2M words → 36MB trie JS file
+- Trie format: `node[char]` for children, `node.$=1` for word marker, leaf node = `1` (number)
+- Russian wordlist from danakt was Windows-1251 encoded, needed `iconv` conversion
+- The board uses single-character dice faces (each die = 6 consecutive chars from an encoded string)
+- Dark mode CSS was overriding background image — needed to include `url('bg.png')` in the dark mode rule too
+- Rapid dropdown switching caused multiple timers: `clearInterval` alone insufficient because `setInterval` was created inside a pending `setTimeout` — solved with generation counter pattern
 
 ## Explicit Constraints (Verbatim Only)
 - "stick to the long 3 letter names, no need for mapping" (for URL lang params)
