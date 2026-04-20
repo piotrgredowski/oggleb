@@ -180,6 +180,11 @@
     opacity: 1;
   }
 
+  .dice.word-hover {
+    outline: 3px solid #ff9800;
+    outline-offset: -1px;
+  }
+
   .word-group-label {
     width: 100%;
     font-size: 0.75rem;
@@ -296,6 +301,7 @@ function findWords(board, trie, minLength) {
     const found = new Set();
     const cellHits = Array.from({ length: rows }, () => new Array(cols).fill(0));
     const cellWords = Array.from({ length: rows }, () => Array.from({ length: cols }, () => new Set()));
+    const wordCells = {};
     const visited = Array.from({ length: rows }, () => new Array(cols).fill(false));
     const pathBuf = [];
 
@@ -304,6 +310,8 @@ function findWords(board, trie, minLength) {
             cellHits[pr][pc]++;
             cellWords[pr][pc].add(word);
         }
+        if (!wordCells[word]) wordCells[word] = [];
+        wordCells[word].push(pathBuf.map(([r, c]) => r * cols + c));
     }
 
     function dfs(r, c, node, word) {
@@ -346,7 +354,7 @@ function findWords(board, trie, minLength) {
             dfs(r, c, trie, '');
         }
     }
-    return { found, cellHits, cellWords };
+    return { found, cellHits, cellWords, wordCells };
 }
 
 // --- Dictionary loading via <script> tag ---
@@ -553,6 +561,26 @@ function setupDiceHover(cellWords) {
     });
 }
 
+function setupWordHover(wordCells) {
+    const diceEls = boardEl.querySelectorAll('.dice');
+    const wordLinks = wordListEl.querySelectorAll('a[data-word]');
+
+    wordLinks.forEach(a => {
+        const paths = wordCells[a.dataset.word];
+        if (!paths || paths.length === 0) return;
+
+        const cellIndices = new Set();
+        for (const p of paths) for (const idx of p) cellIndices.add(idx);
+
+        a.addEventListener('mouseenter', () => {
+            for (const idx of cellIndices) diceEls[idx].classList.add('word-hover');
+        });
+        a.addEventListener('mouseleave', () => {
+            for (const idx of cellIndices) diceEls[idx].classList.remove('word-hover');
+        });
+    });
+}
+
 async function onTimerEnd() {
     if (!currentBoard) return;
 
@@ -562,10 +590,11 @@ async function onTimerEnd() {
     const trie = await ensureTrie(dictCfg);
     if (!trie) return;
 
-    const { found, cellHits, cellWords } = findWords(currentBoard, trie, 3);
+    const { found, cellHits, cellWords, wordCells } = findWords(currentBoard, trie, 3);
     showResults(Array.from(found), dictCfg);
     applyHeatmap(cellHits);
     setupDiceHover(cellWords);
+    setupWordHover(wordCells);
 }
 
 function createBoard(langKey) {
