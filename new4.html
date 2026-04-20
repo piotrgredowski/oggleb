@@ -12,6 +12,7 @@
     font-family: sans-serif;
     margin: 20px;
     transition: background 0.3s, color 0.3s;
+    background: url('bg.png') center/cover no-repeat fixed;
   }
 
   .layout {
@@ -195,7 +196,7 @@
 
   /* Dark mode */
   @media (prefers-color-scheme: dark) {
-    body { background: #121212; color: #fff; }
+    body { background: url('bg.png') center/cover no-repeat fixed, #121212; color: #fff; }
     .dice { background: #1f1f1f; color: #ffeb3b; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
     #timer { color: #ffeb3b; }
     select { background: #1f1f1f; color: #ffeb3b; }
@@ -217,6 +218,7 @@
 
     <div id="timer">03:00</div>
     <button id="reshuffleBtn">Jeszcze raz!</button>
+    <button id="showWordsBtn" style="display:none">A pokaż!</button>
     <div id="dictStatus"></div>
   </div>
 
@@ -332,7 +334,11 @@ function setDictStatus(msg) {
 
 async function ensureTrie(dictCfg) {
     if (!dictCfg) return null;
-    if (trieCache[dictCfg.path]) return trieCache[dictCfg.path];
+    if (trieCache[dictCfg.path]) {
+        trieReady = true;
+        updateShowWordsBtn();
+        return trieCache[dictCfg.path];
+    }
 
     // Dedupe concurrent fetches
     if (loadingDict && loadingDict.path === dictCfg.path) {
@@ -362,6 +368,8 @@ async function ensureTrie(dictCfg) {
         const trie = buildTrie(upper);
         trieCache[dictCfg.path] = trie;
         setDictStatus('Słownik gotowy ✓');
+        trieReady = true;
+        updateShowWordsBtn();
         return trie;
     })();
 
@@ -390,6 +398,7 @@ if (urlLang && languages[urlLang]) {
 const boardEl = document.getElementById('board');
 const timerEl = document.getElementById('timer');
 const reshuffleBtn = document.getElementById('reshuffleBtn');
+const showWordsBtn = document.getElementById('showWordsBtn');
 const resultsEl = document.getElementById('results');
 const resultsSummaryEl = document.getElementById('resultsSummary');
 const wordListEl = document.getElementById('wordList');
@@ -415,6 +424,14 @@ function formatTime(seconds) {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
     const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
+}
+
+// Track when trie is ready for current language
+let trieReady = false;
+
+function updateShowWordsBtn() {
+    const dictCfg = getDictConfigForLang(currentLangKey || '');
+    showWordsBtn.style.display = (trieReady && dictCfg && currentBoard) ? '' : 'none';
 }
 
 function hideResults() {
@@ -472,6 +489,8 @@ function createBoard(langKey) {
     hideResults();
     currentBoard = null;
     currentLangKey = langKey;
+    trieReady = false;
+    showWordsBtn.style.display = 'none';
 
     const [rows, cols, , diceString] = languages[langKey];
     boardEl.style.gridTemplateColumns = `repeat(${cols}, 60px)`;
@@ -516,6 +535,7 @@ function createBoard(langKey) {
     setTimeout(() => {
         // Board is now fully settled — capture it
         currentBoard = boardMatrix;
+        updateShowWordsBtn();
 
         let timeLeft = 180;
         timerEl.textContent = formatTime(timeLeft);
@@ -546,6 +566,13 @@ languageSelect.addEventListener('change', e => {
 // Reshuffle button
 reshuffleBtn.addEventListener('click', () => {
     createBoard(languageSelect.value);
+});
+
+// Show words immediately
+showWordsBtn.addEventListener('click', () => {
+    clearInterval(timerInterval);
+    timerEl.textContent = '00:00';
+    onTimerEnd();
 });
 </script>
 
