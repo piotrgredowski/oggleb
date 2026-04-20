@@ -272,6 +272,9 @@
     color: inherit;
   }
 
+.scoring-table { width:100%; border-collapse:collapse; margin:6px 0 10px; font-size:0.82em; opacity:0.85; }
+.scoring-table td { padding:1px 6px; }
+.scoring-table td:last-child { text-align:right; font-weight:bold; }
 </style>
 </head>
 <body>
@@ -293,6 +296,14 @@
     <button id="reshuffleBtn">Jeszcze raz!</button>
     <button id="showWordsBtn" style="display:none">A pokaż!</button>
     <div id="dictStatus"></div>
+
+    <table class="scoring-table">
+      <tr><td>3–4 litery</td><td>1 pkt</td></tr>
+      <tr><td>5 liter</td><td>2 pkt</td></tr>
+      <tr><td>6 liter</td><td>3 pkt</td></tr>
+      <tr><td>7 liter</td><td>5 pkt</td></tr>
+      <tr><td>8+ liter</td><td>11 pkt</td></tr>
+    </table>
   </div>
 
   <div class="main">
