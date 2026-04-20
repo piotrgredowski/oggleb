@@ -50,6 +50,30 @@
     font-weight: bold;
   }
 
+  .timer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .timer-controls {
+    display: flex;
+    gap: 8px;
+  }
+
+  .timer-btn {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    font-size: 0.7rem;
+    line-height: 1;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.4;
+  }
+
   #dictStatus {
     font-size: 0.8rem;
     opacity: 0.6;
@@ -243,7 +267,13 @@
     <label for="language">Choose version:</label>
     <select id="language"></select>
 
-    <div id="timer">03:00</div>
+    <div class="timer-row">
+      <div id="timer"></div>
+      <div class="timer-controls">
+        <button id="timerMinus" class="timer-btn">−</button>
+        <button id="timerPlus" class="timer-btn">+</button>
+      </div>
+    </div>
     <button id="reshuffleBtn">Jeszcze raz!</button>
     <button id="showWordsBtn" style="display:none">A pokaż!</button>
     <div id="dictStatus"></div>
@@ -423,7 +453,15 @@ for (let key in languages) {
 }
 
 // Apply ?lang= param
-const urlLang = new URLSearchParams(window.location.search).get('lang');
+const urlParams = new URLSearchParams(window.location.search);
+const urlLang = urlParams.get('lang');
+let gameDuration = Math.max(10, parseInt(urlParams.get('t'), 10) || 180);
+
+function updateDurationUrl() {
+    const url = new URL(window.location);
+    url.searchParams.set('t', gameDuration);
+    history.replaceState(null, '', url);
+}
 if (urlLang && languages[urlLang]) {
     languageSelect.value = urlLang;
 }
@@ -599,7 +637,7 @@ async function onTimerEnd() {
 
 function createBoard(langKey) {
     clearInterval(timerInterval);
-    timerEl.textContent = '03:00';
+    timerEl.textContent = formatTime(gameDuration);
     boardEl.innerHTML = '';
     hideResults();
     currentBoard = null;
@@ -653,7 +691,7 @@ function createBoard(langKey) {
         currentBoard = boardMatrix;
         updateShowWordsBtn();
 
-        let timeLeft = 180;
+        let timeLeft = gameDuration;
         timerEl.textContent = formatTime(timeLeft);
         timerInterval = setInterval(() => {
             timeLeft--;
@@ -688,6 +726,19 @@ languageSelect.addEventListener('change', e => {
 
 // Reshuffle button
 reshuffleBtn.addEventListener('click', () => {
+    createBoard(languageSelect.value);
+});
+
+// Timer +/- buttons
+document.getElementById('timerMinus').addEventListener('click', () => {
+    gameDuration = Math.max(60, gameDuration - 60);
+    updateDurationUrl();
+    createBoard(languageSelect.value);
+});
+
+document.getElementById('timerPlus').addEventListener('click', () => {
+    gameDuration += 60;
+    updateDurationUrl();
     createBoard(languageSelect.value);
 });
 
