@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boggle Multi-Language Board</title>
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: sans-serif;
+    margin: 20px;
+    transition: background 0.3s, color 0.3s;
+    background: url('bg.webp') center/cover no-repeat fixed;
+  }
+
+  .layout {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    width: 100%;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+  }
+
+  .sidebar h1 {
+    margin: 0;
+    font-size: 1.8rem;
+  }
+
+  .sidebar label {
+    font-size: 0.95rem;
+  }
+
+  .sidebar select {
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+  }
+
+  #timer {
+    font-size: 2rem;
+    font-weight: bold;
+  }
+
+  #dictStatus {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    min-height: 1.2em;
+  }
+
+  button {
+    padding: 8px 16px;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    background-color: #007bff;
+    color: white;
+    transition: background 0.3s;
+  }
+
+  button:hover {
+    background-color: #0056b3;
+  }
+
+  .main {
+    display: flex;
+    justify-content: center;
+  }
+
+  #board {
+    display: grid;
+    gap: 12px;
+    perspective: 600px;
+  }
+
+  .dice {
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    font-weight: bold;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    transform-style: preserve-3d;
+    cursor: pointer;
+    transition: background 0.3s, color 0.3s, box-shadow 0.3s;
+    background: #fff;
+    color: #333;
+  }
+
+  .rolling {
+    animation: roll 0.8s infinite;
+  }
+
+  @keyframes roll {
+    0% { transform: rotateX(0deg) rotateY(0deg); }
+    25% { transform: rotateX(180deg) rotateY(0deg); }
+    50% { transform: rotateX(180deg) rotateY(180deg); }
+    75% { transform: rotateX(0deg) rotateY(180deg); }
+    100% { transform: rotateX(0deg) rotateY(0deg); }
+  }
+
+  /* Results column */
+  .results {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 200px;
+    max-width: 320px;
+  }
+
+  .results.visible {
+    display: flex;
+  }
+
+  .results h2 {
+    margin: 0;
+    font-size: 1.3rem;
+  }
+
+  .results-summary {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    margin-bottom: 4px;
+  }
+
+  .word-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 8px;
+  }
+
+  .word-list a {
+    font-size: 0.85rem;
+    font-family: monospace;
+    text-decoration: none;
+    color: inherit;
+    opacity: 0.85;
+    transition: opacity 0.15s;
+  }
+
+  .word-list a:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
+
+  .word-group-label {
+    width: 100%;
+    font-size: 0.75rem;
+    font-weight: bold;
+    opacity: 0.5;
+    margin-top: 6px;
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 2px;
+  }
+
+  /* Desktop: side-by-side layout */
+  @media (min-width: 768px) {
+    .layout {
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 48px;
+    }
+
+    .sidebar {
+      align-items: flex-start;
+      min-width: 180px;
+      position: sticky;
+      top: 20px;
+    }
+
+    .sidebar h1 {
+      font-size: 2rem;
+    }
+
+    .results {
+      position: sticky;
+      top: 20px;
+    }
+  }
+
+  /* Dark mode */
+  @media (prefers-color-scheme: dark) {
+    body { background: url('bg.webp') center/cover no-repeat fixed, #121212; color: #fff; }
+    .dice { background: #1f1f1f; color: #ffeb3b; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
+    #timer { color: #ffeb3b; }
+    select { background: #1f1f1f; color: #ffeb3b; }
+    button { background-color: #1a73e8; color: #fff; }
+    button:hover { background-color: #135ac2; }
+    .word-list a { color: #ccc; }
+    .word-list a:hover { color: #fff; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <div class="sidebar">
+    <h1>Boggle Board</h1>
+
+    <label for="language">Choose version:</label>
+    <select id="language"></select>
+
+    <div id="timer">03:00</div>
+    <button id="reshuffleBtn">Jeszcze raz!</button>
+    <button id="showWordsBtn" style="display:none">A pokaż!</button>
+    <div id="dictStatus"></div>
+  </div>
+
+  <div class="main">
+    <div id="board"></div>
+  </div>
+
+  <div class="results" id="results">
+    <h2>Znalezione słowa</h2>
+    <div class="results-summary" id="resultsSummary"></div>
+    <div class="word-list" id="wordList"></div>
+  </div>
+</div>
+
+<script>
+const languages = {
+    spa: [5, 5, 0, 'MTGAOYURODÓCAECLTLROIEFCCNZNUEÉTSLDQEEAENAOJNDCEPEIYALVIEUDSTNASEMRARMOAIOLLTAPORASODEAOQOÚESANSTEAAREAINSNRMEAUODALEPÁCACNXSÍEBDKSTSSULSPEIIMEIÑNEEHI'],
+    rus: [5, 5, 0, 'ЖАДАЧАОНБЬИГЫМЩПТЁАУАООИКЬЛВМЯПФИИПНЙЬЛОУКВЕГСРЕЛОЕГДЙЯАИИОЦТТСЛСООАЕЫЧЮИЗОЕЖЕТНЪАНЛОНСАВНСРРЛИЕБЭТШОВВРАЕАЕПМТОТОАСШБКОЕВНУРХРЛЯУРЗОКДСКРЕНХИЧНИОДЛМТ'],
+    pol: [5, 5, 0, 'ODCNAAURSZSOKBZTAĘĘUZEYGOELSWCÓTZJTŚKAŁOZAENERIHALCŁMIMRDYŻZPTAĆĆOBIDINENPNISAINWŁUMYLAGKŁUŃBJDRIYĘZOJZINZYISNKEŻJPOOŚĄTEEMSWŹOWHAOEKWEGPFCCOEIAIĄERAI'],
+    eng: [5, 5, 0, 'SOTHEEAAAMRHIEOSOJAGUSTFWEQHGAAOTITNIEYVDRIEDHASCINTDZRXTOECIEKNSOREIARIAEORENNAOWLOPKSPHNEESCPGSLVMTASLEDWRFTLOORFNMEFETTTYHTHGENUEECRELTBYAABBUDUMNH'],
+    pol6: [6, 6, 0, 'OĆGZJAÓZGŻSKGIMNIJĆECKPYSKPWZISILLIYŁAŁŁEUCTRŃEMIAGROSCOENŁEMKOONIŁEEDBHYTLOZIESIFIZAINUIPTPSNCUDOTAISAĘKJYKAIALĄEMNMRCEIRAŁPALWZZTYWRIOMWRMZÓCBAIOWRONZENZESJAPDAAĘCŚBAĄOYUEEESAWOZONZYWŚĄAĘHŹDDUŁDPŻAZTOŚJBIŻTNNOERĘHE'],
+    pol7: [7, 7, 0, 'YBNŁYRKĘOŁASSSOEŚZĄWBĘGDŁREZDŁSMCĆCEHPOGBTPIOÓWEIEATEIRUDNOWATIIHZAWKINWCKNKMJEAUĄEIMYGNOORPIWOĘIDCDNAOOZŃNAIMMĘDSIEOEOUZERKBIHMNŻEŚIEŁKIŻWUSOHGONEOĄZKIZTFEUAŻDDZTCLLAIZCĘZIZKEAZWPANAALPRBJASCACPDYOLŁRŻAZEŁZUOPASNŹMANIAIYYJJZŚIEŁSRETRGEWCTNOSZOŚCZGNIYRÓIAYJAAYEOMNLITJŁWĄĘĆJOIYMSEAPLZRUIESTTAAS'],
+
+    eng44: [4, 4, 17.12, 'HCPTYNBWAHALOFRHBKNOWAQTAXFTSMEALIAERELEHEDRPGGREVNEYTRWETZOATOIFEEDOMNSEIOUEUOIATNTDSSSJHNRSMIC'],
+    pol44: [4, 4, 5.36, 'UIEWNĄICDTOŻOAEKOOIZUPŹYŃDBTTWMJENSNCAGANNERIĘAIIZECZÓIIŁOOYZSĆELAGZZKAŁŻRSYAPHDLWAMRHEMOĘĄBŚŁSF'],
+    spa44: [4, 4, 17.66, 'ÓNSNOSEÑUKAANNEDNTCHXMQINZYFEWAAOÚUASLDURÁEÉDÍTAEIÜOTEAEOOEAOLLDERSRIOPJAVDMAPEARLUCSSRALIBCREOI'],
+    eng55: [5, 5, 48.34, 'OEBLIURBEHIATYTHMOTCHOFECNOYTADHTQVODNAKSBDRSANARTSHENORZADTOHMTNOTEEDEETEESNEIIEGTERAGSPKIALVLHPHSUICELRSEOAIMPGTESNRUEEEAMOWXRFWNENARCJSFAULYIGWAOTF'],
+    pol55: [5, 5, 13.28, 'ZŚOERONTHJBĆGAUIŁPZSŚAISAIŁGLŻSTWEEYAYSĆCYAMKNEWTŁRAEADWZEJĘWNĘBPZAIYEDIINOJIEAREAOMKŻZRIZOIORZŹEIICNSLHMJOUAPCNFEOĘKOEDŁŃUKPZCDOULZĄAÓTMWSCITOYGBKĄNN'],
+    spa55: [5, 5, 49.8, 'HSKOQSÓMECOYESAÚNOUHAÍNOEUNROPNOIEIFLTÉLRJIOVÍASEOCONPEBDCDRCAZIEEIGLABRAÁOEAWLDMRRALXNASAAEAAILYSQTSÑTAEANÜTEDLEUILUUOSLAACDECRSDTRENEMERPNIAREAUSODN'],
+    eng66: [6, 6, 91.3, 'ECRSMIGWNEAUTSOAYTLFANMTEDDBHIMEONEOABIRENGOOFEEHLEADIVOEEOPOASKRRPTMLTRNNRNUIDRMGIESTTREAETRTHWPLINATZEEHPGTLSUICATAXTHFNAECARSECNGSIDECELVTSOBHVESIDEOWESATEALAMAEHSRNUOAROHUHHATIISNOOWJRFOETYQNDDYHENWTERFKLOUYWSETB'],
+    pol66: [6, 6, 22.26, 'CŻIÓBHZIRZSACIIŁPNZWOHAŁWYEANPANAOIPGINFSBWBRLTARRMSEJYOIDZJLNATŁRZDYICŚUONGIĆACETEENĄGMNIAWEAAARAOEUDEYJŚOWAZĘMOZEERIINŹAIDSMOPISEPEZŻAJOYIŁŻĘLŚBTUDKCDMKŁĘMKEAPYNKCEĘIŁMNWÓOZJPUKYUEOOSSZKŁŃACGLISOSEĆTORIZOHZTWZĄTELĄ'],
+    spa66: [6, 6, 98.46, 'SKWDACTLIUOADLVDSERNAEDENEDLYERRONNAAREELOECLSSELASCILIVANIUMOAOGPBÉROINAOEINPOSHFOLRMÓEEIAARÚSORAMARTNAARAEJNBOÜQRSAHEUCPTTELÑSAARPGBDSRNJNNSYEDCETÁREUFSENECEÓAUAAEUOAÍCNDIEADAOLTEÍODTSUCQOAAEIPDOOIITOSAMSEMLUXLUQZL'],
+    spa77: [7, 7, 151.56, 'OISASTOPEZEEECPOAOONEOATAERLAEAOLLLNUNEADÑITTEDTYAUUOCIRDDEZIHNARTIAOBDDDNOSLSMÍCAMLARAGAVNOOUIROEURSRALWEQAÍRENÜTCLNAOSRELTIESNCENDDIOLCEOEMNCNRLAARDCLBRSVYAPOEOSÓESDLPÉURIQÓETAASLRSEAMETULALAEEDSIPNANEEDRRROURAÓBEEBEADAÍIRCÁMNCAXYIOENÚSFOSENVCJIJHAAAEINPUGSKBFAEOONCAISSPIENUTOSSUEMOAULHALDMA'],
+};
+
+// Dictionary config per language prefix
+const dictConfig = {
+    pol: { trieSrc: 'pl_dict_trie.js', linkBase: 'https://sjp.pl/' },
+};
+
+function getDictConfigForLang(langKey) {
+    for (const prefix in dictConfig) {
+        if (langKey.startsWith(prefix)) return dictConfig[prefix];
+    }
+    return null;
+}
+
+// --- Trie & Solver ---
+
+function findWords(board, trie, minLength) {
+    const rows = board.length;
+    const cols = board[0].length;
+    const found = new Set();
+    const visited = Array.from({ length: rows }, () => new Array(cols).fill(false));
+
+    function dfs(r, c, node, word) {
+        if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+        if (visited[r][c]) return;
+
+        const ch = board[r][c];
+        const next = node[ch];
+        if (!next) return;
+
+        const nextWord = word + ch;
+        // next === 1 means leaf (is a word, no children)
+        if (next === 1) {
+            if (nextWord.length >= minLength) found.add(nextWord);
+            return;
+        }
+        if (next.$ && nextWord.length >= minLength) {
+            found.add(nextWord);
+        }
+
+        visited[r][c] = true;
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                dfs(r + dr, c + dc, next, nextWord);
+            }
+        }
+        visited[r][c] = false;
+    }
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            dfs(r, c, trie, '');
+        }
+    }
+    return found;
+}
+
+// --- Dictionary loading via <script> tag ---
+
+let trieLoaded = null; // cached trie reference
+let trieLoadPromise = null;
+
+const dictStatusEl = document.getElementById('dictStatus');
+
+function setDictStatus(msg) {
+    dictStatusEl.textContent = msg;
+}
+
+function loadTrieViaScript(src) {
+    if (trieLoaded) return Promise.resolve(trieLoaded);
+    if (trieLoadPromise) return trieLoadPromise;
+
+    trieLoadPromise = new Promise((resolve, reject) => {
+        setDictStatus('Ładowanie słownika…');
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => {
+            if (window.PL_TRIE) {
+                trieLoaded = window.PL_TRIE;
+                setDictStatus('Słownik gotowy ✓');
+                trieReady = true;
+                updateShowWordsBtn();
+                resolve(trieLoaded);
+            } else {
+                setDictStatus('Błąd słownika');
+                reject(new Error('PL_TRIE not found after script load'));
+            }
+        };
+        script.onerror = () => {
+            setDictStatus('Brak słownika');
+            trieLoadPromise = null;
+            reject(new Error('Failed to load ' + src));
+        };
+        document.head.appendChild(script);
+    });
+    return trieLoadPromise;
+}
+
+async function ensureTrie(dictCfg) {
+    if (!dictCfg) return null;
+    if (trieLoaded) {
+        trieReady = true;
+        updateShowWordsBtn();
+        return trieLoaded;
+    }
+    try {
+        return await loadTrieViaScript(dictCfg.trieSrc);
+    } catch (e) {
+        return null;
+    }
+}
+
+// --- UI elements ---
+
+const languageSelect = document.getElementById('language');
+for (let key in languages) {
+    const option = document.createElement('option');
+    option.value = key;
+    option.textContent = key;
+    languageSelect.appendChild(option);
+}
+
+// Apply ?lang= param
+const urlLang = new URLSearchParams(window.location.search).get('lang');
+if (urlLang && languages[urlLang]) {
+    languageSelect.value = urlLang;
+}
+
+const boardEl = document.getElementById('board');
+const timerEl = document.getElementById('timer');
+const reshuffleBtn = document.getElementById('reshuffleBtn');
+const showWordsBtn = document.getElementById('showWordsBtn');
+const resultsEl = document.getElementById('results');
+const resultsSummaryEl = document.getElementById('resultsSummary');
+const wordListEl = document.getElementById('wordList');
+let timerInterval;
+
+// Current board state (captured after dice settle)
+let currentBoard = null;
+let currentLangKey = null;
+
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+function getRandomLetter(die) {
+    return die[Math.floor(Math.random() * die.length)];
+}
+
+function formatTime(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+// Track when trie is ready for current language
+let trieReady = false;
+
+function updateShowWordsBtn() {
+    const dictCfg = getDictConfigForLang(currentLangKey || '');
+    showWordsBtn.style.display = (trieReady && dictCfg && currentBoard) ? '' : 'none';
+}
+
+function hideResults() {
+    resultsEl.classList.remove('visible');
+    wordListEl.innerHTML = '';
+    resultsSummaryEl.textContent = '';
+}
+
+function showResults(words, dictCfg) {
+    // Sort longest → shortest, then alphabetically within same length
+    words.sort((a, b) => b.length - a.length || a.localeCompare(b));
+
+    resultsSummaryEl.textContent = `${words.length} słów`;
+    wordListEl.innerHTML = '';
+
+    let lastLen = -1;
+    for (const w of words) {
+        if (w.length !== lastLen) {
+            lastLen = w.length;
+            const label = document.createElement('div');
+            label.className = 'word-group-label';
+            label.textContent = `${lastLen} liter`;
+            wordListEl.appendChild(label);
+        }
+        const a = document.createElement('a');
+        a.textContent = w.toLowerCase();
+        if (dictCfg && dictCfg.linkBase) {
+            a.href = dictCfg.linkBase + encodeURIComponent(w.toLowerCase());
+            a.target = '_blank';
+            a.rel = 'noopener';
+        }
+        wordListEl.appendChild(a);
+    }
+
+    resultsEl.classList.add('visible');
+}
+
+async function onTimerEnd() {
+    if (!currentBoard) return;
+
+    const dictCfg = getDictConfigForLang(currentLangKey);
+    if (!dictCfg) return; // no dictionary for this language
+
+    const trie = await ensureTrie(dictCfg);
+    if (!trie) return;
+
+    const found = findWords(currentBoard, trie, 3);
+    showResults(Array.from(found), dictCfg);
+}
+
+function createBoard(langKey) {
+    clearInterval(timerInterval);
+    timerEl.textContent = '03:00';
+    boardEl.innerHTML = '';
+    hideResults();
+    currentBoard = null;
+    currentLangKey = langKey;
+    trieReady = false;
+    showWordsBtn.style.display = 'none';
+    setDictStatus('');
+
+    const [rows, cols, , diceString] = languages[langKey];
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, 60px)`;
+    boardEl.style.gridTemplateRows = `repeat(${rows}, 60px)`;
+
+    // Start preloading dictionary immediately
+    const dictCfg = getDictConfigForLang(langKey);
+    if (dictCfg) ensureTrie(dictCfg);
+
+    // Split string into dice (6 letters each)
+    const dice = [];
+    for (let i = 0; i < diceString.length; i += 6) {
+        dice.push(diceString.slice(i, i + 6));
+    }
+
+    const shuffledDice = shuffle([...dice]);
+    let maxDelay = 0;
+
+    // Prepare board matrix to capture settled letters
+    const boardMatrix = Array.from({ length: rows }, () => new Array(cols).fill(''));
+
+    shuffledDice.forEach((dieStr, index) => {
+        const die = dieStr.split('');
+        const diceEl = document.createElement('div');
+        diceEl.className = 'dice rolling';
+        boardEl.appendChild(diceEl);
+
+        const delay = 500 + index * 100;
+        maxDelay = Math.max(maxDelay, delay);
+
+        setTimeout(() => {
+            diceEl.classList.remove('rolling');
+            const letter = getRandomLetter(die);
+            diceEl.textContent = letter;
+            const r = Math.floor(index / cols);
+            const c = index % cols;
+            boardMatrix[r][c] = letter.toUpperCase();
+        }, delay);
+    });
+
+    // Start timer after last die settled
+    setTimeout(() => {
+        // Board is now fully settled — capture it
+        currentBoard = boardMatrix;
+        updateShowWordsBtn();
+
+        let timeLeft = 180;
+        timerEl.textContent = formatTime(timeLeft);
+        timerInterval = setInterval(() => {
+            timeLeft--;
+            timerEl.textContent = formatTime(timeLeft);
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timerEl.textContent = "00:00";
+                onTimerEnd();
+            }
+        }, 1000);
+    }, maxDelay + 200);
+}
+
+// Initialize first board
+createBoard(languageSelect.value);
+
+// Change board on selection and update URL
+languageSelect.addEventListener('change', e => {
+    const lang = e.target.value;
+    const url = new URL(window.location);
+    url.searchParams.set('lang', lang);
+    history.replaceState(null, '', url);
+    createBoard(lang);
+});
+
+// Reshuffle button
+reshuffleBtn.addEventListener('click', () => {
+    createBoard(languageSelect.value);
+});
+
+// Show words immediately
+showWordsBtn.addEventListener('click', () => {
+    clearInterval(timerInterval);
+    timerEl.textContent = '00:00';
+    onTimerEnd();
+});
+</script>
+
+</body>
+</html>
