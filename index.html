@@ -507,6 +507,8 @@ const resultsEl = document.getElementById('results');
 const resultsSummaryEl = document.getElementById('resultsSummary');
 const wordListEl = document.getElementById('wordList');
 let timerInterval;
+let pendingTimeouts = [];
+let boardGeneration = 0;
 
 // Current board state (captured after dice settle)
 let currentBoard = null;
@@ -691,6 +693,9 @@ async function onTimerEnd() {
 
 function createBoard(langKey) {
     clearInterval(timerInterval);
+    pendingTimeouts.forEach(id => clearTimeout(id));
+    pendingTimeouts = [];
+    const gen = ++boardGeneration;
     timerEl.textContent = formatTime(gameDuration);
     boardEl.innerHTML = '';
     hideResults();
@@ -729,18 +734,20 @@ function createBoard(langKey) {
         const delay = 500 + index * 100;
         maxDelay = Math.max(maxDelay, delay);
 
-        setTimeout(() => {
+        pendingTimeouts.push(setTimeout(() => {
+            if (gen !== boardGeneration) return;
             diceEl.classList.remove('rolling');
             const letter = getRandomLetter(die);
             diceEl.textContent = letter;
             const r = Math.floor(index / cols);
             const c = index % cols;
             boardMatrix[r][c] = letter.toUpperCase();
-        }, delay);
+        }, delay));
     });
 
     // Start timer after last die settled
-    setTimeout(() => {
+    pendingTimeouts.push(setTimeout(() => {
+        if (gen !== boardGeneration) return;
         // Board is now fully settled — capture it
         currentBoard = boardMatrix;
         updateShowWordsBtn();
@@ -748,6 +755,7 @@ function createBoard(langKey) {
         let timeLeft = gameDuration;
         timerEl.textContent = formatTime(timeLeft);
         timerInterval = setInterval(() => {
+            if (gen !== boardGeneration) { clearInterval(timerInterval); return; }
             timeLeft--;
             timerEl.textContent = formatTime(timeLeft);
             if (timeLeft === 15) {
@@ -763,7 +771,7 @@ function createBoard(langKey) {
                 onTimerEnd();
             }
         }, 1000);
-    }, maxDelay + 200);
+    }, maxDelay + 200));
 }
 
 // Initialize first board
