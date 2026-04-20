@@ -49,6 +49,12 @@
     font-weight: bold;
   }
 
+  #dictStatus {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    min-height: 1.2em;
+  }
+
   button {
     padding: 8px 16px;
     font-size: 1rem;
@@ -104,6 +110,63 @@
     100% { transform: rotateX(0deg) rotateY(0deg); }
   }
 
+  /* Results column */
+  .results {
+    display: none;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 200px;
+    max-width: 320px;
+  }
+
+  .results.visible {
+    display: flex;
+  }
+
+  .results h2 {
+    margin: 0;
+    font-size: 1.3rem;
+  }
+
+  .results-summary {
+    font-size: 0.85rem;
+    opacity: 0.7;
+    margin-bottom: 4px;
+  }
+
+  .word-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding-right: 8px;
+  }
+
+  .word-list a {
+    font-size: 0.85rem;
+    font-family: monospace;
+    text-decoration: none;
+    color: inherit;
+    opacity: 0.85;
+    transition: opacity 0.15s;
+  }
+
+  .word-list a:hover {
+    opacity: 1;
+    text-decoration: underline;
+  }
+
+  .word-group-label {
+    width: 100%;
+    font-size: 0.75rem;
+    font-weight: bold;
+    opacity: 0.5;
+    margin-top: 6px;
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 2px;
+  }
+
   /* Desktop: side-by-side layout */
   @media (min-width: 768px) {
     .layout {
@@ -123,6 +186,11 @@
     .sidebar h1 {
       font-size: 2rem;
     }
+
+    .results {
+      position: sticky;
+      top: 20px;
+    }
   }
 
   /* Dark mode */
@@ -133,6 +201,8 @@
     select { background: #1f1f1f; color: #ffeb3b; }
     button { background-color: #1a73e8; color: #fff; }
     button:hover { background-color: #135ac2; }
+    .word-list a { color: #ccc; }
+    .word-list a:hover { color: #fff; }
   }
 </style>
 </head>
@@ -147,10 +217,17 @@
 
     <div id="timer">03:00</div>
     <button id="reshuffleBtn">Jeszcze raz!</button>
+    <div id="dictStatus"></div>
   </div>
 
   <div class="main">
     <div id="board"></div>
+  </div>
+
+  <div class="results" id="results">
+    <h2>Znalezione słowa</h2>
+    <div class="results-summary" id="resultsSummary"></div>
+    <div class="word-list" id="wordList"></div>
   </div>
 </div>
 
@@ -175,7 +252,127 @@ const languages = {
     spa77: [7, 7, 151.56, 'OISASTOPEZEEECPOAOONEOATAERLAEAOLLLNUNEADÑITTEDTYAUUOCIRDDEZIHNARTIAOBDDDNOSLSMÍCAMLARAGAVNOOUIROEURSRALWEQAÍRENÜTCLNAOSRELTIESNCENDDIOLCEOEMNCNRLAARDCLBRSVYAPOEOSÓESDLPÉURIQÓETAASLRSEAMETULALAEEDSIPNANEEDRRROURAÓBEEBEADAÍIRCÁMNCAXYIOENÚSFOSENVCJIJHAAAEINPUGSKBFAEOONCAISSPIENUTOSSUEMOAULHALDMA'],
 };
 
-// Populate dropdown
+// Dictionary config per language prefix
+const dictConfig = {
+    pol: { path: 'boggle_pl_js/pl_sjp.pl.txt', linkBase: 'https://sjp.pl/' },
+};
+
+function getDictConfigForLang(langKey) {
+    for (const prefix in dictConfig) {
+        if (langKey.startsWith(prefix)) return dictConfig[prefix];
+    }
+    return null;
+}
+
+// --- Trie & Solver (ported from boggle_pl.js) ---
+
+function buildTrie(words) {
+    const root = { c: Object.create(null), w: false };
+    for (let i = 0; i < words.length; i++) {
+        const word = words[i];
+        if (!word) continue;
+        let node = root;
+        for (let j = 0; j < word.length; j++) {
+            const ch = word[j];
+            if (!node.c[ch]) node.c[ch] = { c: Object.create(null), w: false };
+            node = node.c[ch];
+        }
+        node.w = true;
+    }
+    return root;
+}
+
+function findWords(board, trieRoot, minLength) {
+    const rows = board.length;
+    const cols = board[0].length;
+    const found = new Set();
+    const visited = Array.from({ length: rows }, () => new Array(cols).fill(false));
+
+    function dfs(r, c, node, word) {
+        if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+        if (visited[r][c]) return;
+
+        const ch = board[r][c];
+        const next = node.c[ch];
+        if (!next) return;
+
+        const nextWord = word + ch;
+        if (next.w && nextWord.length >= minLength) {
+            found.add(nextWord);
+        }
+
+        visited[r][c] = true;
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                dfs(r + dr, c + dc, next, nextWord);
+            }
+        }
+        visited[r][c] = false;
+    }
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            dfs(r, c, trieRoot, '');
+        }
+    }
+    return found;
+}
+
+// --- Dictionary loading & caching ---
+
+const trieCache = {}; // keyed by dict path
+let loadingDict = null; // current fetch promise to dedupe
+
+const dictStatusEl = document.getElementById('dictStatus');
+
+function setDictStatus(msg) {
+    dictStatusEl.textContent = msg;
+}
+
+async function ensureTrie(dictCfg) {
+    if (!dictCfg) return null;
+    if (trieCache[dictCfg.path]) return trieCache[dictCfg.path];
+
+    // Dedupe concurrent fetches
+    if (loadingDict && loadingDict.path === dictCfg.path) {
+        return loadingDict.promise;
+    }
+
+    const promise = (async () => {
+        setDictStatus('Pobieranie słownika…');
+        const resp = await fetch(dictCfg.path);
+        if (!resp.ok) {
+            setDictStatus('Brak słownika');
+            return null;
+        }
+        const text = await resp.text();
+        setDictStatus('Budowanie trie…');
+
+        // Yield to keep UI responsive
+        await new Promise(r => setTimeout(r, 0));
+
+        const words = text.split(/\r?\n/);
+        const upper = new Array(words.length);
+        for (let i = 0; i < words.length; i++) {
+            const w = words[i].trim();
+            if (w.length >= 2) upper[i] = w.toUpperCase();
+        }
+
+        const trie = buildTrie(upper);
+        trieCache[dictCfg.path] = trie;
+        setDictStatus('Słownik gotowy ✓');
+        return trie;
+    })();
+
+    loadingDict = { path: dictCfg.path, promise };
+    const result = await promise;
+    loadingDict = null;
+    return result;
+}
+
+// --- UI elements ---
+
 const languageSelect = document.getElementById('language');
 for (let key in languages) {
     const option = document.createElement('option');
@@ -193,43 +390,108 @@ if (urlLang && languages[urlLang]) {
 const boardEl = document.getElementById('board');
 const timerEl = document.getElementById('timer');
 const reshuffleBtn = document.getElementById('reshuffleBtn');
+const resultsEl = document.getElementById('results');
+const resultsSummaryEl = document.getElementById('resultsSummary');
+const wordListEl = document.getElementById('wordList');
 let timerInterval;
 
+// Current board state (captured after dice settle)
+let currentBoard = null;
+let currentLangKey = null;
+
 function shuffle(array) {
-    for (let i = array.length-1; i>0; i--){
-        const j = Math.floor(Math.random()*(i+1));
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
     }
     return array;
 }
 
-function getRandomLetter(die){
-    return die[Math.floor(Math.random()*die.length)];
+function getRandomLetter(die) {
+    return die[Math.floor(Math.random() * die.length)];
 }
 
-function formatTime(seconds){
-    const m = Math.floor(seconds/60).toString().padStart(2,'0');
-    const s = (seconds%60).toString().padStart(2,'0');
+function formatTime(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
     return `${m}:${s}`;
+}
+
+function hideResults() {
+    resultsEl.classList.remove('visible');
+    wordListEl.innerHTML = '';
+    resultsSummaryEl.textContent = '';
+}
+
+function showResults(words, dictCfg) {
+    // Sort longest → shortest, then alphabetically within same length
+    words.sort((a, b) => b.length - a.length || a.localeCompare(b));
+
+    resultsSummaryEl.textContent = `${words.length} słów`;
+    wordListEl.innerHTML = '';
+
+    let lastLen = -1;
+    for (const w of words) {
+        if (w.length !== lastLen) {
+            lastLen = w.length;
+            const label = document.createElement('div');
+            label.className = 'word-group-label';
+            label.textContent = `${lastLen} liter`;
+            wordListEl.appendChild(label);
+        }
+        const a = document.createElement('a');
+        a.textContent = w.toLowerCase();
+        if (dictCfg && dictCfg.linkBase) {
+            a.href = dictCfg.linkBase + encodeURIComponent(w.toLowerCase());
+            a.target = '_blank';
+            a.rel = 'noopener';
+        }
+        wordListEl.appendChild(a);
+    }
+
+    resultsEl.classList.add('visible');
+}
+
+async function onTimerEnd() {
+    if (!currentBoard) return;
+
+    const dictCfg = getDictConfigForLang(currentLangKey);
+    if (!dictCfg) return; // no dictionary for this language
+
+    const trie = await ensureTrie(dictCfg);
+    if (!trie) return;
+
+    const found = findWords(currentBoard, trie, 3);
+    showResults(Array.from(found), dictCfg);
 }
 
 function createBoard(langKey) {
     clearInterval(timerInterval);
     timerEl.textContent = '03:00';
     boardEl.innerHTML = '';
+    hideResults();
+    currentBoard = null;
+    currentLangKey = langKey;
 
     const [rows, cols, , diceString] = languages[langKey];
     boardEl.style.gridTemplateColumns = `repeat(${cols}, 60px)`;
     boardEl.style.gridTemplateRows = `repeat(${rows}, 60px)`;
 
+    // Start preloading dictionary immediately
+    const dictCfg = getDictConfigForLang(langKey);
+    if (dictCfg) ensureTrie(dictCfg);
+
     // Split string into dice (6 letters each)
     const dice = [];
-    for(let i=0; i<diceString.length; i+=6){
-        dice.push(diceString.slice(i,i+6));
+    for (let i = 0; i < diceString.length; i += 6) {
+        dice.push(diceString.slice(i, i + 6));
     }
 
     const shuffledDice = shuffle([...dice]);
     let maxDelay = 0;
+
+    // Prepare board matrix to capture settled letters
+    const boardMatrix = Array.from({ length: rows }, () => new Array(cols).fill(''));
 
     shuffledDice.forEach((dieStr, index) => {
         const die = dieStr.split('');
@@ -240,32 +502,40 @@ function createBoard(langKey) {
         const delay = 500 + index * 100;
         maxDelay = Math.max(maxDelay, delay);
 
-        setTimeout(()=>{
+        setTimeout(() => {
             diceEl.classList.remove('rolling');
-            diceEl.textContent = getRandomLetter(die);
+            const letter = getRandomLetter(die);
+            diceEl.textContent = letter;
+            const r = Math.floor(index / cols);
+            const c = index % cols;
+            boardMatrix[r][c] = letter.toUpperCase();
         }, delay);
     });
 
     // Start timer after last die settled
-    setTimeout(()=>{
+    setTimeout(() => {
+        // Board is now fully settled — capture it
+        currentBoard = boardMatrix;
+
         let timeLeft = 180;
         timerEl.textContent = formatTime(timeLeft);
-        timerInterval = setInterval(()=>{
+        timerInterval = setInterval(() => {
             timeLeft--;
             timerEl.textContent = formatTime(timeLeft);
-            if(timeLeft <= 0){
+            if (timeLeft <= 0) {
                 clearInterval(timerInterval);
                 timerEl.textContent = "00:00";
+                onTimerEnd();
             }
-        },1000);
-    }, maxDelay+200);
+        }, 1000);
+    }, maxDelay + 200);
 }
 
 // Initialize first board
 createBoard(languageSelect.value);
 
 // Change board on selection and update URL
-languageSelect.addEventListener('change', e=>{
+languageSelect.addEventListener('change', e => {
     const lang = e.target.value;
     const url = new URL(window.location);
     url.searchParams.set('lang', lang);
@@ -274,7 +544,7 @@ languageSelect.addEventListener('change', e=>{
 });
 
 // Reshuffle button
-reshuffleBtn.addEventListener('click', ()=>{
+reshuffleBtn.addEventListener('click', () => {
     createBoard(languageSelect.value);
 });
 </script>
