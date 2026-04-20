@@ -300,7 +300,7 @@
   </div>
 
   <div class="results" id="results">
-    <h2>Znalezione słowa</h2>
+    <h2 id="resultsHeader">Znalezione słowa</h2>
     <div class="results-summary" id="resultsSummary"></div>
     <div class="word-list" id="wordList"></div>
   </div>
@@ -334,7 +334,10 @@ const languages = {
 
 // Dictionary config per language prefix
 const dictConfig = {
-    pol: { trieSrc: 'pl_dict_trie.js', linkBase: 'https://sjp.pl/' },
+    pol: { trieSrc: 'pl_dict_trie.js', globalVar: 'PL_TRIE', linkBase: 'https://sjp.pl/' },
+    eng: { trieSrc: 'en_dict_trie.js', globalVar: 'EN_TRIE', linkBase: 'https://en.wiktionary.org/wiki/' },
+    spa: { trieSrc: 'es_dict_trie.js', globalVar: 'ES_TRIE', linkBase: 'https://dle.rae.es/' },
+    rus: { trieSrc: 'ru_dict_trie.js', globalVar: 'RU_TRIE', linkBase: 'https://ru.wiktionary.org/wiki/' },
 };
 
 function getDictConfigForLang(langKey) {
@@ -410,8 +413,8 @@ function findWords(board, trie, minLength) {
 
 // --- Dictionary loading via <script> tag ---
 
-let trieLoaded = null; // cached trie reference
-let trieLoadPromise = null;
+const trieCache = {};
+const trieLoadPromises = {};
 
 const dictStatusEl = document.getElementById('dictStatus');
 
@@ -419,45 +422,47 @@ function setDictStatus(msg) {
     dictStatusEl.textContent = msg;
 }
 
-function loadTrieViaScript(src) {
-    if (trieLoaded) return Promise.resolve(trieLoaded);
-    if (trieLoadPromise) return trieLoadPromise;
+function loadTrieViaScript(dictCfg) {
+    const key = dictCfg.globalVar;
+    if (trieCache[key]) return Promise.resolve(trieCache[key]);
+    if (trieLoadPromises[key]) return trieLoadPromises[key];
 
-    trieLoadPromise = new Promise((resolve, reject) => {
+    trieLoadPromises[key] = new Promise((resolve, reject) => {
         setDictStatus('Ładowanie słownika…');
         const script = document.createElement('script');
-        script.src = src;
+        script.src = dictCfg.trieSrc;
         script.onload = () => {
-            if (window.PL_TRIE) {
-                trieLoaded = window.PL_TRIE;
+            if (window[key]) {
+                trieCache[key] = window[key];
                 setDictStatus('Słownik gotowy ✓');
                 trieReady = true;
                 updateShowWordsBtn();
-                resolve(trieLoaded);
+                resolve(trieCache[key]);
             } else {
                 setDictStatus('Błąd słownika');
-                reject(new Error('PL_TRIE not found after script load'));
+                reject(new Error(key + ' not found after script load'));
             }
         };
         script.onerror = () => {
             setDictStatus('Brak słownika');
-            trieLoadPromise = null;
-            reject(new Error('Failed to load ' + src));
+            delete trieLoadPromises[key];
+            reject(new Error('Failed to load ' + dictCfg.trieSrc));
         };
         document.head.appendChild(script);
     });
-    return trieLoadPromise;
+    return trieLoadPromises[key];
 }
 
 async function ensureTrie(dictCfg) {
     if (!dictCfg) return null;
-    if (trieLoaded) {
+    const key = dictCfg.globalVar;
+    if (trieCache[key]) {
         trieReady = true;
         updateShowWordsBtn();
-        return trieLoaded;
+        return trieCache[key];
     }
     try {
-        return await loadTrieViaScript(dictCfg.trieSrc);
+        return await loadTrieViaScript(dictCfg);
     } catch (e) {
         return null;
     }
@@ -532,11 +537,32 @@ function hideResults() {
     resultsSummaryEl.textContent = '';
 }
 
+const resultsHeaders = {
+    pol: 'Znalezione słowa', eng: 'Words found',
+    spa: 'Palabras encontradas', rus: 'Найденные слова',
+};
+const resultsSummaryLabels = {
+    pol: n => `${n} słów`, eng: n => `${n} words`,
+    spa: n => `${n} palabras`, rus: n => `${n} слов`,
+};
+const letterLabels = {
+    pol: n => `${n} liter`, eng: n => `${n} letters`,
+    spa: n => `${n} letras`, rus: n => `${n} букв`,
+};
+
+function getLangPrefix(langKey) {
+    for (const prefix in dictConfig) {
+        if (langKey.startsWith(prefix)) return prefix;
+    }
+    return 'eng';
+}
+
 function showResults(words, dictCfg) {
-    // Sort longest → shortest, then alphabetically within same length
     words.sort((a, b) => b.length - a.length || a.localeCompare(b));
 
-    resultsSummaryEl.textContent = `${words.length} słów`;
+    const prefix = getLangPrefix(currentLangKey);
+    document.getElementById('resultsHeader').textContent = resultsHeaders[prefix] || resultsHeaders.eng;
+    resultsSummaryEl.textContent = (resultsSummaryLabels[prefix] || resultsSummaryLabels.eng)(words.length);
     wordListEl.innerHTML = '';
 
     let lastLen = -1;
@@ -545,7 +571,7 @@ function showResults(words, dictCfg) {
             lastLen = w.length;
             const label = document.createElement('div');
             label.className = 'word-group-label';
-            label.textContent = `${lastLen} liter`;
+            label.textContent = (letterLabels[prefix] || letterLabels.eng)(lastLen);
             wordListEl.appendChild(label);
         }
         const a = document.createElement('a');

@@ -3,24 +3,36 @@
 const fs = require('fs');
 const path = require('path');
 
-const dictPath = path.join(__dirname, 'boggle_pl_js', 'pl_sjp.pl.txt');
-const outPath = path.join(__dirname, 'pl_dict_trie.js');
-
-console.log('Reading dictionary...');
-const raw = fs.readFileSync(dictPath, 'utf8');
-const words = raw.split(/\r?\n/).map(w => w.trim().toUpperCase()).filter(w => w.length >= 2);
-console.log(`${words.length} words`);
-
-console.log('Building trie...');
-const root = Object.create(null);
-for (const word of words) {
-    let node = root;
-    for (const ch of word) {
-        if (!node[ch]) node[ch] = Object.create(null);
-        node = node[ch];
-    }
-    node.$ = 1;
-}
+const configs = [
+    {
+        name: 'PL',
+        src: path.join(__dirname, 'boggle_pl_js', 'pl_sjp.pl.txt'),
+        out: path.join(__dirname, 'pl_dict_trie.js'),
+        globalVar: 'PL_TRIE',
+        filter: w => w.length >= 2,
+    },
+    {
+        name: 'EN',
+        src: path.join(__dirname, 'dicts', 'en_merged.txt'),
+        out: path.join(__dirname, 'en_dict_trie.js'),
+        globalVar: 'EN_TRIE',
+        filter: w => w.length >= 2 && /^[A-Z]+$/.test(w),
+    },
+    {
+        name: 'ES',
+        src: path.join(__dirname, 'dicts', 'es_file2017.txt'),
+        out: path.join(__dirname, 'es_dict_trie.js'),
+        globalVar: 'ES_TRIE',
+        filter: w => w.length >= 2,
+    },
+    {
+        name: 'RU',
+        src: path.join(__dirname, 'dicts', 'ru_danakt.txt'),
+        out: path.join(__dirname, 'ru_dict_trie.js'),
+        globalVar: 'RU_TRIE',
+        filter: w => w.length >= 2 && /^[А-ЯЁ]+$/.test(w),
+    },
+];
 
 function compactify(node) {
     const keys = Object.keys(node);
@@ -34,12 +46,35 @@ function compactify(node) {
     return out;
 }
 
-console.log('Compacting & deduplicating...');
-const compact = compactify(root);
+const target = process.argv[2]; // optional: 'PL', 'EN', 'ES', 'RU' or omit for all
 
-const json = JSON.stringify(compact);
-const js = `window.PL_TRIE=${json};\n`;
+for (const cfg of configs) {
+    if (target && cfg.name !== target.toUpperCase()) continue;
 
-fs.writeFileSync(outPath, js);
-const sizeMB = (Buffer.byteLength(js) / 1024 / 1024).toFixed(1);
-console.log(`Written ${outPath} (${sizeMB} MB)`);
+    console.log(`\n=== ${cfg.name} ===`);
+    console.log(`Reading ${cfg.src}...`);
+    const raw = fs.readFileSync(cfg.src, 'utf8');
+    const words = raw.split(/\r?\n/).map(w => w.trim().toUpperCase()).filter(cfg.filter);
+    console.log(`${words.length} words`);
+
+    console.log('Building trie...');
+    const root = Object.create(null);
+    for (const word of words) {
+        let node = root;
+        for (const ch of word) {
+            if (!node[ch]) node[ch] = Object.create(null);
+            node = node[ch];
+        }
+        node.$ = 1;
+    }
+
+    console.log('Compacting...');
+    const compact = compactify(root);
+
+    const json = JSON.stringify(compact);
+    const js = `window.${cfg.globalVar}=${json};\n`;
+
+    fs.writeFileSync(cfg.out, js);
+    const sizeMB = (Buffer.byteLength(js) / 1024 / 1024).toFixed(1);
+    console.log(`Written ${cfg.out} (${sizeMB} MB)`);
+}
