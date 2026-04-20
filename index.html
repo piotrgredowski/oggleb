@@ -165,12 +165,19 @@
     text-decoration: none;
     color: inherit;
     opacity: 0.85;
-    transition: opacity 0.15s;
+    transition: opacity 0.15s, background 0.15s;
+    padding: 1px 3px;
+    border-radius: 3px;
   }
 
   .word-list a:hover {
     opacity: 1;
     text-decoration: underline;
+  }
+
+  .word-list a.highlight {
+    background: rgba(255, 152, 0, 0.35);
+    opacity: 1;
   }
 
   .word-group-label {
@@ -288,11 +295,15 @@ function findWords(board, trie, minLength) {
     const cols = board[0].length;
     const found = new Set();
     const cellHits = Array.from({ length: rows }, () => new Array(cols).fill(0));
+    const cellWords = Array.from({ length: rows }, () => Array.from({ length: cols }, () => new Set()));
     const visited = Array.from({ length: rows }, () => new Array(cols).fill(false));
-    const path = [];
+    const pathBuf = [];
 
-    function recordPath() {
-        for (const [pr, pc] of path) cellHits[pr][pc]++;
+    function recordPath(word) {
+        for (const [pr, pc] of pathBuf) {
+            cellHits[pr][pc]++;
+            cellWords[pr][pc].add(word);
+        }
     }
 
     function dfs(r, c, node, word) {
@@ -304,19 +315,19 @@ function findWords(board, trie, minLength) {
         if (!next) return;
 
         const nextWord = word + ch;
-        path.push([r, c]);
+        pathBuf.push([r, c]);
 
         if (next === 1) {
             if (nextWord.length >= minLength) {
                 found.add(nextWord);
-                recordPath();
+                recordPath(nextWord);
             }
-            path.pop();
+            pathBuf.pop();
             return;
         }
         if (next.$ && nextWord.length >= minLength) {
             found.add(nextWord);
-            recordPath();
+            recordPath(nextWord);
         }
 
         visited[r][c] = true;
@@ -327,7 +338,7 @@ function findWords(board, trie, minLength) {
             }
         }
         visited[r][c] = false;
-        path.pop();
+        pathBuf.pop();
     }
 
     for (let r = 0; r < rows; r++) {
@@ -335,7 +346,7 @@ function findWords(board, trie, minLength) {
             dfs(r, c, trie, '');
         }
     }
-    return { found, cellHits };
+    return { found, cellHits, cellWords };
 }
 
 // --- Dictionary loading via <script> tag ---
@@ -472,6 +483,7 @@ function showResults(words, dictCfg) {
         }
         const a = document.createElement('a');
         a.textContent = w.toLowerCase();
+        a.dataset.word = w;
         if (dictCfg && dictCfg.linkBase) {
             a.href = dictCfg.linkBase + encodeURIComponent(w.toLowerCase());
             a.target = '_blank';
@@ -516,6 +528,31 @@ function applyHeatmap(cellHits) {
     });
 }
 
+function setupDiceHover(cellWords) {
+    const cols = cellWords[0].length;
+    const diceEls = boardEl.querySelectorAll('.dice');
+    const wordLinks = wordListEl.querySelectorAll('a[data-word]');
+    const wordLinkMap = {};
+    wordLinks.forEach(a => { wordLinkMap[a.dataset.word] = a; });
+
+    diceEls.forEach((el, i) => {
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        const words = cellWords[r][c];
+
+        el.addEventListener('mouseenter', () => {
+            for (const w of words) {
+                if (wordLinkMap[w]) wordLinkMap[w].classList.add('highlight');
+            }
+        });
+        el.addEventListener('mouseleave', () => {
+            for (const w of words) {
+                if (wordLinkMap[w]) wordLinkMap[w].classList.remove('highlight');
+            }
+        });
+    });
+}
+
 async function onTimerEnd() {
     if (!currentBoard) return;
 
@@ -525,9 +562,10 @@ async function onTimerEnd() {
     const trie = await ensureTrie(dictCfg);
     if (!trie) return;
 
-    const { found, cellHits } = findWords(currentBoard, trie, 3);
+    const { found, cellHits, cellWords } = findWords(currentBoard, trie, 3);
     showResults(Array.from(found), dictCfg);
     applyHeatmap(cellHits);
+    setupDiceHover(cellWords);
 }
 
 function createBoard(langKey) {
