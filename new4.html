@@ -12,7 +12,7 @@
     font-family: sans-serif;
     margin: 20px;
     transition: background 0.3s, color 0.3s;
-    background: url('bg.png') center/cover no-repeat fixed;
+    background: url('bg.webp') center/cover no-repeat fixed;
   }
 
   .layout {
@@ -196,7 +196,7 @@
 
   /* Dark mode */
   @media (prefers-color-scheme: dark) {
-    body { background: url('bg.png') center/cover no-repeat fixed, #121212; color: #fff; }
+    body { background: url('bg.webp') center/cover no-repeat fixed, #121212; color: #fff; }
     .dice { background: #1f1f1f; color: #ffeb3b; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
     #timer { color: #ffeb3b; }
     select { background: #1f1f1f; color: #ffeb3b; }
@@ -477,6 +477,7 @@ function createBoard(langKey) {
     currentLangKey = langKey;
     trieReady = false;
     showWordsBtn.style.display = 'none';
+    setDictStatus('');
 
     const [rows, cols, , diceString] = languages[langKey];
     boardEl.style.gridTemplateColumns = `repeat(${cols}, 60px)`;
