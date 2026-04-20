@@ -256,7 +256,7 @@ const languages = {
 
 // Dictionary config per language prefix
 const dictConfig = {
-    pol: { path: 'boggle_pl_js/pl_sjp.pl.txt', linkBase: 'https://sjp.pl/' },
+    pol: { trieSrc: 'pl_dict_trie.js', linkBase: 'https://sjp.pl/' },
 };
 
 function getDictConfigForLang(langKey) {
@@ -266,25 +266,9 @@ function getDictConfigForLang(langKey) {
     return null;
 }
 
-// --- Trie & Solver (ported from boggle_pl.js) ---
+// --- Trie & Solver ---
 
-function buildTrie(words) {
-    const root = { c: Object.create(null), w: false };
-    for (let i = 0; i < words.length; i++) {
-        const word = words[i];
-        if (!word) continue;
-        let node = root;
-        for (let j = 0; j < word.length; j++) {
-            const ch = word[j];
-            if (!node.c[ch]) node.c[ch] = { c: Object.create(null), w: false };
-            node = node.c[ch];
-        }
-        node.w = true;
-    }
-    return root;
-}
-
-function findWords(board, trieRoot, minLength) {
+function findWords(board, trie, minLength) {
     const rows = board.length;
     const cols = board[0].length;
     const found = new Set();
@@ -295,11 +279,16 @@ function findWords(board, trieRoot, minLength) {
         if (visited[r][c]) return;
 
         const ch = board[r][c];
-        const next = node.c[ch];
+        const next = node[ch];
         if (!next) return;
 
         const nextWord = word + ch;
-        if (next.w && nextWord.length >= minLength) {
+        // next === 1 means leaf (is a word, no children)
+        if (next === 1) {
+            if (nextWord.length >= minLength) found.add(nextWord);
+            return;
+        }
+        if (next.$ && nextWord.length >= minLength) {
             found.add(nextWord);
         }
 
@@ -315,16 +304,16 @@ function findWords(board, trieRoot, minLength) {
 
     for (let r = 0; r < rows; r++) {
         for (let c = 0; c < cols; c++) {
-            dfs(r, c, trieRoot, '');
+            dfs(r, c, trie, '');
         }
     }
     return found;
 }
 
-// --- Dictionary loading & caching ---
+// --- Dictionary loading via <script> tag ---
 
-const trieCache = {}; // keyed by dict path
-let loadingDict = null; // current fetch promise to dedupe
+let trieLoaded = null; // cached trie reference
+let trieLoadPromise = null;
 
 const dictStatusEl = document.getElementById('dictStatus');
 
@@ -332,51 +321,48 @@ function setDictStatus(msg) {
     dictStatusEl.textContent = msg;
 }
 
+function loadTrieViaScript(src) {
+    if (trieLoaded) return Promise.resolve(trieLoaded);
+    if (trieLoadPromise) return trieLoadPromise;
+
+    trieLoadPromise = new Promise((resolve, reject) => {
+        setDictStatus('Ładowanie słownika…');
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => {
+            if (window.PL_TRIE) {
+                trieLoaded = window.PL_TRIE;
+                setDictStatus('Słownik gotowy ✓');
+                trieReady = true;
+                updateShowWordsBtn();
+                resolve(trieLoaded);
+            } else {
+                setDictStatus('Błąd słownika');
+                reject(new Error('PL_TRIE not found after script load'));
+            }
+        };
+        script.onerror = () => {
+            setDictStatus('Brak słownika');
+            trieLoadPromise = null;
+            reject(new Error('Failed to load ' + src));
+        };
+        document.head.appendChild(script);
+    });
+    return trieLoadPromise;
+}
+
 async function ensureTrie(dictCfg) {
     if (!dictCfg) return null;
-    if (trieCache[dictCfg.path]) {
+    if (trieLoaded) {
         trieReady = true;
         updateShowWordsBtn();
-        return trieCache[dictCfg.path];
+        return trieLoaded;
     }
-
-    // Dedupe concurrent fetches
-    if (loadingDict && loadingDict.path === dictCfg.path) {
-        return loadingDict.promise;
+    try {
+        return await loadTrieViaScript(dictCfg.trieSrc);
+    } catch (e) {
+        return null;
     }
-
-    const promise = (async () => {
-        setDictStatus('Pobieranie słownika…');
-        const resp = await fetch(dictCfg.path);
-        if (!resp.ok) {
-            setDictStatus('Brak słownika');
-            return null;
-        }
-        const text = await resp.text();
-        setDictStatus('Budowanie trie…');
-
-        // Yield to keep UI responsive
-        await new Promise(r => setTimeout(r, 0));
-
-        const words = text.split(/\r?\n/);
-        const upper = new Array(words.length);
-        for (let i = 0; i < words.length; i++) {
-            const w = words[i].trim();
-            if (w.length >= 2) upper[i] = w.toUpperCase();
-        }
-
-        const trie = buildTrie(upper);
-        trieCache[dictCfg.path] = trie;
-        setDictStatus('Słownik gotowy ✓');
-        trieReady = true;
-        updateShowWordsBtn();
-        return trie;
-    })();
-
-    loadingDict = { path: dictCfg.path, promise };
-    const result = await promise;
-    loadingDict = null;
-    return result;
 }
 
 // --- UI elements ---
