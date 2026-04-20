@@ -91,6 +91,8 @@
     align-items: center;
     font-size: 1.5rem;
     font-weight: bold;
+    -webkit-text-stroke: 0.5px black;
+    paint-order: stroke fill;
     box-shadow: 0 5px 15px rgba(0,0,0,0.3);
     transform-style: preserve-3d;
     cursor: pointer;
@@ -285,7 +287,13 @@ function findWords(board, trie, minLength) {
     const rows = board.length;
     const cols = board[0].length;
     const found = new Set();
+    const cellHits = Array.from({ length: rows }, () => new Array(cols).fill(0));
     const visited = Array.from({ length: rows }, () => new Array(cols).fill(false));
+    const path = [];
+
+    function recordPath() {
+        for (const [pr, pc] of path) cellHits[pr][pc]++;
+    }
 
     function dfs(r, c, node, word) {
         if (r < 0 || r >= rows || c < 0 || c >= cols) return;
@@ -296,13 +304,19 @@ function findWords(board, trie, minLength) {
         if (!next) return;
 
         const nextWord = word + ch;
-        // next === 1 means leaf (is a word, no children)
+        path.push([r, c]);
+
         if (next === 1) {
-            if (nextWord.length >= minLength) found.add(nextWord);
+            if (nextWord.length >= minLength) {
+                found.add(nextWord);
+                recordPath();
+            }
+            path.pop();
             return;
         }
         if (next.$ && nextWord.length >= minLength) {
             found.add(nextWord);
+            recordPath();
         }
 
         visited[r][c] = true;
@@ -313,6 +327,7 @@ function findWords(board, trie, minLength) {
             }
         }
         visited[r][c] = false;
+        path.pop();
     }
 
     for (let r = 0; r < rows; r++) {
@@ -320,7 +335,7 @@ function findWords(board, trie, minLength) {
             dfs(r, c, trie, '');
         }
     }
-    return found;
+    return { found, cellHits };
 }
 
 // --- Dictionary loading via <script> tag ---
@@ -468,17 +483,51 @@ function showResults(words, dictCfg) {
     resultsEl.classList.add('visible');
 }
 
+function applyHeatmap(cellHits) {
+    const rows = cellHits.length;
+    const cols = cellHits[0].length;
+    const diceEls = boardEl.querySelectorAll('.dice');
+    let maxHits = 0;
+    for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+            if (cellHits[r][c] > maxHits) maxHits = cellHits[r][c];
+
+    if (maxHits === 0) return;
+
+    diceEls.forEach((el, i) => {
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        const ratio = cellHits[r][c] / maxHits;
+        // Interpolate: grey (#888) → orange (#ff9800) → red (#f44336)
+        let cr, cg, cb;
+        if (ratio <= 0.5) {
+            const t = ratio * 2;
+            cr = Math.round(0x88 + (0xff - 0x88) * t);
+            cg = Math.round(0x88 + (0x98 - 0x88) * t);
+            cb = Math.round(0x88 + (0x00 - 0x88) * t);
+        } else {
+            const t = (ratio - 0.5) * 2;
+            cr = Math.round(0xff + (0xf4 - 0xff) * t);
+            cg = Math.round(0x98 + (0x43 - 0x98) * t);
+            cb = Math.round(0x00 + (0x36 - 0x00) * t);
+        }
+        el.style.color = `rgb(${cr},${cg},${cb})`;
+        el.classList.remove('finished');
+    });
+}
+
 async function onTimerEnd() {
     if (!currentBoard) return;
 
     const dictCfg = getDictConfigForLang(currentLangKey);
-    if (!dictCfg) return; // no dictionary for this language
+    if (!dictCfg) return;
 
     const trie = await ensureTrie(dictCfg);
     if (!trie) return;
 
-    const found = findWords(currentBoard, trie, 3);
+    const { found, cellHits } = findWords(currentBoard, trie, 3);
     showResults(Array.from(found), dictCfg);
+    applyHeatmap(cellHits);
 }
 
 function createBoard(langKey) {
