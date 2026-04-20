@@ -184,6 +184,12 @@ for (let key in languages) {
     languageSelect.appendChild(option);
 }
 
+// Apply ?lang= param
+const urlLang = new URLSearchParams(window.location.search).get('lang');
+if (urlLang && languages[urlLang]) {
+    languageSelect.value = urlLang;
+}
+
 const boardEl = document.getElementById('board');
 const timerEl = document.getElementById('timer');
 const reshuffleBtn = document.getElementById('reshuffleBtn');
@@ -258,9 +264,13 @@ function createBoard(langKey) {
 // Initialize first board
 createBoard(languageSelect.value);
 
-// Change board on selection
+// Change board on selection and update URL
 languageSelect.addEventListener('change', e=>{
-    createBoard(e.target.value);
+    const lang = e.target.value;
+    const url = new URL(window.location);
+    url.searchParams.set('lang', lang);
+    history.replaceState(null, '', url);
+    createBoard(lang);
 });
 
 // Reshuffle button
