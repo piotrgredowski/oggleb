@@ -99,6 +99,19 @@
     color: #333;
   }
 
+  .dice.finished {
+    color: #4caf50;
+  }
+
+  .dice.urgent {
+    animation: urgent-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes urgent-pulse {
+    0%, 100% { color: #ffeb3b; }
+    50% { color: #f44336; }
+  }
+
   .rolling {
     animation: roll 0.8s infinite;
   }
@@ -529,9 +542,16 @@ function createBoard(langKey) {
         timerInterval = setInterval(() => {
             timeLeft--;
             timerEl.textContent = formatTime(timeLeft);
+            if (timeLeft === 15) {
+                boardEl.querySelectorAll('.dice').forEach(d => d.classList.add('urgent'));
+            }
             if (timeLeft <= 0) {
                 clearInterval(timerInterval);
                 timerEl.textContent = "00:00";
+                boardEl.querySelectorAll('.dice').forEach(d => {
+                    d.classList.remove('urgent');
+                    d.classList.add('finished');
+                });
                 onTimerEnd();
             }
         }, 1000);
