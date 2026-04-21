@@ -1125,7 +1125,7 @@ reshuffleBtn.addEventListener('click', () => {
 
 // Timer +/- buttons
 document.getElementById('timerMinus').addEventListener('click', () => {
-    gameDuration = gameDuration <= 60 ? 30 : gameDuration - 60;
+    gameDuration = Math.max(30, gameDuration - 60);
     updateDurationUrl();
     createBoard(languageSelect.value);
 });
