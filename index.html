@@ -21,13 +21,15 @@
     align-items: center;
     gap: 20px;
     width: 100%;
+    max-width: 1500px;
   }
 
   .sidebar {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     gap: 14px;
+    width: min(320px, 100%);
   }
 
   .sidebar h1 {
@@ -97,7 +99,40 @@
 
   .main {
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    flex: 0 1 auto;
+  }
+
+  .controls-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     justify-content: center;
+    gap: 14px;
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.2);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    backdrop-filter: blur(4px);
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .control-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .control-label {
+    font-size: 0.95rem;
   }
 
   #board {
@@ -154,9 +189,15 @@
   .results {
     display: none;
     flex-direction: column;
-    gap: 8px;
-    min-width: 200px;
-    max-width: 320px;
+    gap: 10px;
+    min-width: 280px;
+    max-width: 420px;
+    width: min(420px, 100%);
+    padding: 16px;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.22);
+    box-shadow: 0 12px 34px rgba(0,0,0,0.18);
+    backdrop-filter: blur(5px);
   }
 
   .results.visible {
@@ -169,38 +210,43 @@
   }
 
   .results-summary {
-    font-size: 0.85rem;
-    opacity: 0.7;
+    font-size: 0.95rem;
+    opacity: 0.85;
     margin-bottom: 4px;
   }
 
   .word-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px 8px;
-    max-height: 70vh;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
+    gap: 8px;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
-    padding-right: 8px;
+    padding-right: 6px;
+    align-content: start;
   }
 
   .word-list a {
-    font-size: 0.85rem;
+    display: block;
+    font-size: 0.95rem;
     font-family: monospace;
     text-decoration: none;
     color: inherit;
-    opacity: 0.85;
-    transition: opacity 0.15s, background 0.15s;
-    padding: 1px 3px;
-    border-radius: 3px;
+    opacity: 0.95;
+    transition: opacity 0.15s, background 0.15s, transform 0.15s;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.18);
   }
 
   .word-list a:hover {
     opacity: 1;
     text-decoration: underline;
+    transform: translateY(-1px);
   }
 
   .word-list a.highlight {
-    background: rgba(255, 152, 0, 0.35);
+    background: rgba(255, 152, 0, 0.5);
     opacity: 1;
   }
 
@@ -210,13 +256,32 @@
   }
 
   .word-group-label {
-    width: 100%;
-    font-size: 0.75rem;
+    grid-column: 1 / -1;
+    font-size: 0.82rem;
     font-weight: bold;
-    opacity: 0.5;
-    margin-top: 6px;
+    opacity: 0.7;
+    margin-top: 8px;
     border-bottom: 1px solid currentColor;
-    padding-bottom: 2px;
+    padding-bottom: 4px;
+  }
+
+  .results-scroll-hint {
+    position: sticky;
+    bottom: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    margin-top: -2px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: bold;
+    background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0.9) 45%, rgba(255,255,255,0.98));
+    text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+  }
+
+  .results-scroll-hint.visible {
+    display: flex;
   }
 
   /* Desktop: side-by-side layout */
@@ -229,19 +294,29 @@
     }
 
     .sidebar {
-      align-items: flex-start;
-      min-width: 180px;
+      min-width: 260px;
       position: sticky;
       top: 20px;
+      height: calc(100vh - 40px);
     }
 
     .sidebar h1 {
       font-size: 2rem;
     }
 
+    .player-panel {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    .main {
+      min-width: 420px;
+    }
+
     .results {
       position: sticky;
       top: 20px;
+      height: calc(100vh - 40px);
     }
   }
 
@@ -253,8 +328,10 @@
     select { background: #1f1f1f; color: #ffeb3b; }
     button { background-color: #1a73e8; color: #fff; }
     button:hover { background-color: #135ac2; }
+    .controls-bar, .results, .player-word-row { background: rgba(15,15,15,0.62); }
     .word-list a { color: #ccc; }
     .word-list a:hover { color: #fff; }
+    .results-scroll-hint { background: linear-gradient(to bottom, rgba(15,15,15,0), rgba(15,15,15,0.92) 45%, rgba(15,15,15,0.98)); }
   }
   .footer-info {
     position: fixed;
@@ -272,9 +349,57 @@
     color: inherit;
   }
 
-.scoring-table { width:100%; border-collapse:collapse; margin:6px 0 10px; font-size:0.82em; opacity:0.85; }
-.scoring-table td { padding:1px 6px; }
-.scoring-table td:last-child { text-align:right; font-weight:bold; }
+.scoring-table {
+  width:min(100%, 320px);
+  margin:2px auto 0;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:0.92rem;
+  background:rgba(12,12,12,0.5);
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 10px 24px rgba(0,0,0,0.18);
+  backdrop-filter:blur(4px);
+}
+.scoring-table caption {
+  caption-side:top;
+  padding:0 0 8px;
+  font-size:0.82rem;
+  font-weight:bold;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+  opacity:0.8;
+}
+.scoring-table td {
+  padding:6px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.scoring-table tr:last-child td { border-bottom:none; }
+.scoring-table td:first-child { opacity:0.9; }
+.scoring-table td:last-child {
+  text-align:right;
+  font-weight:bold;
+  color:#ffeb3b;
+  font-variant-numeric:tabular-nums;
+}
+.player-panel { width:100%; display:flex; flex-direction:column; gap:6px; margin:2px 0 8px; }
+.player-entry { display:flex; gap:6px; width:100%; }
+.player-entry input { flex:1; min-width:0; padding:6px 9px; font-size:0.92rem; border-radius:6px; border:none; }
+.secondary-btn { padding:6px 10px; font-size:0.88rem; white-space:nowrap; }
+.player-word-status { min-height:1em; font-size:0.74rem; opacity:0.75; }
+.player-score-tools { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:2.1em; }
+.player-word-list { display:flex; flex-direction:column; gap:4px; flex:1 1 auto; min-height:220px; overflow-y:auto; }
+.player-word-empty { font-size:0.82rem; opacity:0.6; }
+.player-word-row { display:flex; align-items:center; gap:10px; padding:5px 8px; border-radius:8px; background:rgba(255,255,255,0.12); }
+.player-word-link, .player-word-text { flex:1 1 auto; min-width:0; font-family:monospace; font-size:0.9rem; color:inherit; text-decoration:none; }
+.player-word-link:hover { text-decoration:underline; }
+.player-word-link.non-unique, .player-word-text.non-unique { text-decoration:line-through; opacity:0.6; }
+.player-word-link.non-unique:hover { text-decoration:line-through; }
+.player-word-controls { display:flex; align-items:center; justify-content:flex-end; gap:4px; flex:0 0 auto; margin-left:auto; white-space:nowrap; font-size:0.76rem; opacity:0.9; }
+.player-word-controls input { margin:0; }
+.player-word-issue { flex:0 0 auto; font-size:0.9rem; color:#ff8a8a; white-space:nowrap; cursor:help; }
+.player-word-points { flex:0 0 auto; min-width:40px; text-align:right; font-weight:bold; font-size:0.76rem; white-space:nowrap; }
+.player-score-summary { min-height:1.2em; font-size:0.9rem; font-weight:bold; }
 </style>
 </head>
 <body>
@@ -283,21 +408,44 @@
   <div class="sidebar">
     <h1>Boggle Board</h1>
 
-    <label for="language">Choose version:</label>
-    <select id="language"></select>
-
-    <div class="timer-row">
-      <div id="timer"></div>
-      <div class="timer-controls">
-        <button id="timerMinus" class="timer-btn">−</button>
-        <button id="timerPlus" class="timer-btn">+</button>
+    <div class="player-panel">
+      <div class="player-entry">
+        <input id="playerWordInput" type="text" placeholder="wpisz słowo" autocomplete="off" spellcheck="false">
+        <button id="addWordBtn" class="secondary-btn">Dodaj</button>
       </div>
+      <div id="playerWordStatus" class="player-word-status"></div>
+      <div class="player-score-tools">
+        <button id="countPointsBtn" style="display:none">Policz punkty</button>
+        <div id="playerScoreSummary" class="player-score-summary"></div>
+      </div>
+      <div id="playerWordList" class="player-word-list"></div>
     </div>
-    <button id="reshuffleBtn">Jeszcze raz!</button>
-    <button id="showWordsBtn" style="display:none">A pokaż!</button>
-    <div id="dictStatus"></div>
+  </div>
+
+  <div class="main">
+    <div class="controls-bar">
+      <div class="control-group">
+        <label for="language" class="control-label">Choose version:</label>
+        <select id="language"></select>
+      </div>
+      <div class="timer-row">
+        <div id="timer"></div>
+        <div class="timer-controls">
+          <button id="timerMinus" class="timer-btn">−</button>
+          <button id="timerPlus" class="timer-btn">+</button>
+        </div>
+      </div>
+      <div class="control-actions">
+        <button id="reshuffleBtn">Jeszcze raz!</button>
+        <button id="showWordsBtn" style="display:none">A pokaż!</button>
+      </div>
+      <div id="dictStatus"></div>
+    </div>
+
+    <div id="board"></div>
 
     <table class="scoring-table">
+      <caption>Punktacja</caption>
       <tr><td>3–4 litery</td><td>1 pkt</td></tr>
       <tr><td>5 liter</td><td>2 pkt</td></tr>
       <tr><td>6 liter</td><td>3 pkt</td></tr>
@@ -306,14 +454,11 @@
     </table>
   </div>
 
-  <div class="main">
-    <div id="board"></div>
-  </div>
-
   <div class="results" id="results">
     <h2 id="resultsHeader">Znalezione słowa</h2>
     <div class="results-summary" id="resultsSummary"></div>
     <div class="word-list" id="wordList"></div>
+    <div id="resultsScrollHint" class="results-scroll-hint">Przewiń w dół ↓</div>
   </div>
 </div>
 
@@ -488,12 +633,16 @@ for (let key in languages) {
 // Apply ?lang= param
 const urlParams = new URLSearchParams(window.location.search);
 const urlLang = urlParams.get('lang');
-let gameDuration = Math.max(10, parseInt(urlParams.get('t'), 10) || 180);
+const parsedDuration = parseInt(urlParams.get('t'), 10);
+let gameDuration = Number.isFinite(parsedDuration) ? Math.max(30, parsedDuration) : 180;
 
 function updateDurationUrl() {
     const url = new URL(window.location);
     url.searchParams.set('t', gameDuration);
     history.replaceState(null, '', url);
+}
+if (urlParams.has('t') && parsedDuration !== gameDuration) {
+    updateDurationUrl();
 }
 if (urlLang && languages[urlLang]) {
     languageSelect.value = urlLang;
@@ -506,6 +655,13 @@ const showWordsBtn = document.getElementById('showWordsBtn');
 const resultsEl = document.getElementById('results');
 const resultsSummaryEl = document.getElementById('resultsSummary');
 const wordListEl = document.getElementById('wordList');
+const resultsScrollHintEl = document.getElementById('resultsScrollHint');
+const playerWordInputEl = document.getElementById('playerWordInput');
+const addWordBtn = document.getElementById('addWordBtn');
+const playerWordStatusEl = document.getElementById('playerWordStatus');
+const playerWordListEl = document.getElementById('playerWordList');
+const countPointsBtn = document.getElementById('countPointsBtn');
+const playerScoreSummaryEl = document.getElementById('playerScoreSummary');
 let timerInterval;
 let pendingTimeouts = [];
 let boardGeneration = 0;
@@ -513,6 +669,11 @@ let boardGeneration = 0;
 // Current board state (captured after dice settle)
 let currentBoard = null;
 let currentLangKey = null;
+let playerWords = [];
+let playerWordSet = new Set();
+let solverWords = null;
+let wordScoreState = {};
+let gameFinished = false;
 
 function shuffle(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -532,6 +693,167 @@ function formatTime(seconds) {
     return `${m}:${s}`;
 }
 
+function normalizePlayerWord(value) {
+    return value.trim().toLocaleLowerCase();
+}
+
+function getWordKey(word) {
+    return word.toLocaleUpperCase();
+}
+
+function scoreWord(word) {
+    const len = word.length;
+    if (len < 3) return 0;
+    if (len <= 4) return 1;
+    if (len === 5) return 2;
+    if (len === 6) return 3;
+    if (len === 7) return 5;
+    return 11;
+}
+
+function setPlayerWordStatus(msg) {
+    playerWordStatusEl.textContent = msg;
+}
+
+function setPlayerInputEnabled(enabled) {
+    playerWordInputEl.disabled = !enabled;
+    addWordBtn.disabled = !enabled;
+    playerWordInputEl.placeholder = enabled ? 'wpisz słowo' : 'koniec gry';
+}
+
+function clearScoreSummary() {
+    playerScoreSummaryEl.textContent = '';
+}
+
+function updateResultsScrollHint() {
+    const canScroll = wordListEl.scrollHeight > wordListEl.clientHeight + 8;
+    const atBottom = wordListEl.scrollTop + wordListEl.clientHeight >= wordListEl.scrollHeight - 8;
+    resultsScrollHintEl.classList.toggle('visible', canScroll && !atBottom);
+}
+
+function computePlayerScore() {
+    let total = 0;
+    for (const word of playerWords) {
+        const state = wordScoreState[getWordKey(word)];
+        total += state ? state.points || 0 : 0;
+    }
+    return total;
+}
+
+function renderPlayerWords() {
+    playerWordListEl.innerHTML = '';
+
+    if (!playerWords.length) {
+        const emptyEl = document.createElement('div');
+        emptyEl.className = 'player-word-empty';
+        emptyEl.textContent = 'Brak wpisanych słów.';
+        playerWordListEl.appendChild(emptyEl);
+        return;
+    }
+
+    const dictCfg = getDictConfigForLang(currentLangKey || '');
+    for (const word of playerWords) {
+        const key = getWordKey(word);
+        const row = document.createElement('div');
+        row.className = 'player-word-row';
+
+        let wordEl;
+        if (gameFinished && dictCfg && dictCfg.linkBase) {
+            wordEl = document.createElement('a');
+            wordEl.href = dictCfg.linkBase + encodeURIComponent(word);
+            wordEl.target = '_blank';
+            wordEl.rel = 'noopener';
+            wordEl.className = 'player-word-link';
+        } else {
+            wordEl = document.createElement('span');
+            wordEl.className = 'player-word-text';
+        }
+        wordEl.textContent = word;
+        row.appendChild(wordEl);
+
+        if (gameFinished) {
+            const valid = !!(solverWords && solverWords.has(key));
+            const state = wordScoreState[key] || (wordScoreState[key] = { unique: true, valid: false, points: 0 });
+            state.valid = valid;
+            if (!valid) state.unique = false;
+            state.points = valid && state.unique ? scoreWord(word) : 0;
+            wordEl.classList.toggle('non-unique', !state.unique);
+
+            let issueEl = null;
+            if (!valid) {
+                issueEl = document.createElement('span');
+                issueEl.className = 'player-word-issue';
+                issueEl.textContent = '❌';
+                issueEl.title = 'Słowo nie występuje na planszy';
+                issueEl.setAttribute('aria-label', 'Słowo nie występuje na planszy');
+                row.appendChild(issueEl);
+            }
+
+            const pointsEl = document.createElement('span');
+            pointsEl.className = 'player-word-points';
+            pointsEl.textContent = `${state.points} pkt`;
+            row.appendChild(pointsEl);
+
+            const controls = document.createElement('label');
+            controls.className = 'player-word-controls';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = !!state.unique;
+            checkbox.disabled = !valid;
+            checkbox.addEventListener('change', () => {
+                state.unique = checkbox.checked;
+                state.points = state.valid && state.unique ? scoreWord(word) : 0;
+                wordEl.classList.toggle('non-unique', !state.unique);
+                pointsEl.textContent = `${state.points} pkt`;
+                clearScoreSummary();
+            });
+            controls.appendChild(checkbox);
+            controls.append(document.createTextNode('unikat'));
+            row.appendChild(controls);
+        }
+
+        playerWordListEl.appendChild(row);
+    }
+}
+
+function resetPlayerGameState() {
+    playerWords = [];
+    playerWordSet = new Set();
+    solverWords = null;
+    wordScoreState = {};
+    gameFinished = false;
+    playerWordInputEl.value = '';
+    setPlayerWordStatus('');
+    clearScoreSummary();
+    countPointsBtn.style.display = 'none';
+    setPlayerInputEnabled(true);
+    renderPlayerWords();
+}
+
+function addPlayerWord() {
+    if (gameFinished) return;
+
+    const word = normalizePlayerWord(playerWordInputEl.value);
+    if (!word) {
+        setPlayerWordStatus('');
+        return;
+    }
+
+    const key = getWordKey(word);
+    if (playerWordSet.has(key)) {
+        setPlayerWordStatus('To słowo już jest na liście.');
+        playerWordInputEl.value = '';
+        return;
+    }
+
+    playerWords.unshift(word);
+    playerWordSet.add(key);
+    wordScoreState[key] = { unique: true, valid: false, points: 0 };
+    playerWordInputEl.value = '';
+    setPlayerWordStatus(`Dodano: ${word}`);
+    renderPlayerWords();
+}
+
 // Track when trie is ready for current language
 let trieReady = false;
 
@@ -544,6 +866,7 @@ function hideResults() {
     resultsEl.classList.remove('visible');
     wordListEl.innerHTML = '';
     resultsSummaryEl.textContent = '';
+    resultsScrollHintEl.classList.remove('visible');
 }
 
 const resultsHeaders = {
@@ -595,6 +918,7 @@ function showResults(words, dictCfg) {
     }
 
     resultsEl.classList.add('visible');
+    requestAnimationFrame(updateResultsScrollHint);
 }
 
 function applyHeatmap(cellHits) {
@@ -685,7 +1009,14 @@ async function onTimerEnd() {
     if (!trie) return;
 
     const { found, cellHits, cellWords, wordCells } = findWords(currentBoard, trie, 3);
+    solverWords = found;
+    gameFinished = true;
+    setPlayerWordStatus('');
+    setPlayerInputEnabled(false);
+    countPointsBtn.style.display = '';
+    clearScoreSummary();
     showResults(Array.from(found), dictCfg);
+    renderPlayerWords();
     applyHeatmap(cellHits);
     setupDiceHover(cellWords);
     setupWordHover(wordCells);
@@ -699,6 +1030,7 @@ function createBoard(langKey) {
     timerEl.textContent = formatTime(gameDuration);
     boardEl.innerHTML = '';
     hideResults();
+    resetPlayerGameState();
     currentBoard = null;
     currentLangKey = langKey;
     trieReady = false;
@@ -793,13 +1125,13 @@ reshuffleBtn.addEventListener('click', () => {
 
 // Timer +/- buttons
 document.getElementById('timerMinus').addEventListener('click', () => {
-    gameDuration = Math.max(60, gameDuration - 60);
+    gameDuration = gameDuration <= 60 ? 30 : gameDuration - 60;
     updateDurationUrl();
     createBoard(languageSelect.value);
 });
 
 document.getElementById('timerPlus').addEventListener('click', () => {
-    gameDuration += 60;
+    gameDuration += gameDuration < 60 ? 30 : 60;
     updateDurationUrl();
     createBoard(languageSelect.value);
 });
@@ -809,6 +1141,23 @@ showWordsBtn.addEventListener('click', () => {
     clearInterval(timerInterval);
     timerEl.textContent = '00:00';
     onTimerEnd();
+});
+
+wordListEl.addEventListener('scroll', updateResultsScrollHint);
+window.addEventListener('resize', updateResultsScrollHint);
+
+addWordBtn.addEventListener('click', addPlayerWord);
+
+playerWordInputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        addPlayerWord();
+    }
+});
+
+countPointsBtn.addEventListener('click', () => {
+    const total = computePlayerScore();
+    playerScoreSummaryEl.textContent = `Suma: ${total} pkt`;
 });
 </script>
 
