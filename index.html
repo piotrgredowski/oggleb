@@ -18,7 +18,7 @@
   .layout {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     gap: 20px;
     width: 100%;
     max-width: 1500px;
@@ -32,9 +32,13 @@
     width: min(320px, 100%);
   }
 
-  .sidebar h1 {
-    margin: 0;
+  .app-title {
+    margin: 0 0 8px;
     font-size: 1.8rem;
+    width: 100%;
+    text-align: center;
+    line-height: 1.1;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.35);
   }
 
   .sidebar label {
@@ -215,6 +219,31 @@
     margin-bottom: 4px;
   }
 
+  .results-insights {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.14);
+    font-size: 0.84rem;
+  }
+
+  .results-insight {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .results-insight-label {
+    opacity: 0.72;
+  }
+
+  .results-insight-value {
+    font-weight: bold;
+    text-align: right;
+  }
+
   .word-list {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
@@ -300,7 +329,7 @@
       height: calc(100vh - 40px);
     }
 
-    .sidebar h1 {
+    .app-title {
       font-size: 2rem;
     }
 
@@ -329,6 +358,7 @@
     button { background-color: #1a73e8; color: #fff; }
     button:hover { background-color: #135ac2; }
     .controls-bar, .results, .player-word-row { background: rgba(15,15,15,0.62); }
+    .results-insights { background: rgba(255,255,255,0.06); }
     .word-list a { color: #ccc; }
     .word-list a:hover { color: #fff; }
     .results-scroll-hint { background: linear-gradient(to bottom, rgba(15,15,15,0), rgba(15,15,15,0.92) 45%, rgba(15,15,15,0.98)); }
@@ -349,9 +379,45 @@
     color: inherit;
   }
 
+.scoring-help {
+  width:min(100%, 320px);
+}
+.scoring-summary {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  padding:0;
+  border:none;
+  background:none;
+  color:inherit;
+  box-shadow:none;
+  font-size:0.82rem;
+  font-weight:bold;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+.scoring-summary:hover {
+  background:none;
+}
+.scoring-summary::-webkit-details-marker {
+  display:none;
+}
+.scoring-help-icon {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:20px;
+  height:20px;
+  border-radius:999px;
+  background:rgba(12,12,12,0.45);
+  font-size:0.85rem;
+  font-weight:bold;
+}
 .scoring-table {
   width:min(100%, 320px);
-  margin:2px auto 0;
+  margin:10px auto 0;
   border-collapse:separate;
   border-spacing:0;
   font-size:0.92rem;
@@ -360,15 +426,6 @@
   overflow:hidden;
   box-shadow:0 10px 24px rgba(0,0,0,0.18);
   backdrop-filter:blur(4px);
-}
-.scoring-table caption {
-  caption-side:top;
-  padding:0 0 8px;
-  font-size:0.82rem;
-  font-weight:bold;
-  letter-spacing:0.08em;
-  text-transform:uppercase;
-  opacity:0.8;
 }
 .scoring-table td {
   padding:6px 12px;
@@ -400,14 +457,113 @@
 .player-word-issue { flex:0 0 auto; font-size:0.9rem; color:#ff8a8a; white-space:nowrap; cursor:help; }
 .player-word-points { flex:0 0 auto; min-width:40px; text-align:right; font-weight:bold; font-size:0.76rem; white-space:nowrap; }
 .player-score-summary { min-height:1.2em; font-size:0.9rem; font-weight:bold; }
+
+  @media (max-width: 767px) {
+    body {
+      margin: 8px 12px 12px;
+    }
+
+    .layout {
+      gap: 12px;
+    }
+
+    .app-title {
+      font-size: 1.35rem;
+      margin-bottom: 4px;
+    }
+
+    .sidebar,
+    .results {
+      width: 100%;
+      min-width: 0;
+      max-width: none;
+    }
+
+    .main {
+      order: 1;
+      gap: 10px;
+    }
+
+    .main > .controls-bar {
+      order: 1;
+    }
+
+    .main > #board {
+      order: 2;
+    }
+
+    .main > .scoring-help {
+      order: 3;
+    }
+
+    .sidebar {
+      order: 2;
+      gap: 10px;
+    }
+
+    .results {
+      order: 3;
+      padding: 12px;
+    }
+
+    .controls-bar {
+      gap: 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+    }
+
+    .control-group,
+    .timer-row,
+    .control-actions,
+    .timer-controls {
+      gap: 6px;
+    }
+
+    .control-label,
+    .sidebar label,
+    .sidebar select,
+    button {
+      font-size: 0.88rem;
+    }
+
+    button {
+      padding: 6px 10px;
+    }
+
+    .timer-btn {
+      width: 18px;
+      height: 18px;
+      font-size: 0.65rem;
+    }
+
+    #timer {
+      font-size: 1.55rem;
+    }
+
+    .player-panel {
+      gap: 4px;
+      margin-bottom: 0;
+    }
+
+    .player-word-list {
+      min-height: 140px;
+    }
+
+    .footer-info {
+      position: static;
+      max-width: 100%;
+      font-size: 0.78rem;
+      margin-top: 8px;
+    }
+  }
 </style>
 </head>
 <body>
 
+<h1 class="app-title">Boggle Board</h1>
+
 <div class="layout">
   <div class="sidebar">
-    <h1>Boggle Board</h1>
-
     <div class="player-panel">
       <div class="player-entry">
         <input id="playerWordInput" type="text" placeholder="wpisz słowo" autocomplete="off" spellcheck="false">
@@ -444,19 +600,22 @@
 
     <div id="board"></div>
 
-    <table class="scoring-table">
-      <caption>Punktacja</caption>
-      <tr><td>3–4 litery</td><td>1 pkt</td></tr>
-      <tr><td>5 liter</td><td>2 pkt</td></tr>
-      <tr><td>6 liter</td><td>3 pkt</td></tr>
-      <tr><td>7 liter</td><td>5 pkt</td></tr>
-      <tr><td>8+ liter</td><td>11 pkt</td></tr>
-    </table>
+    <details class="scoring-help">
+      <summary class="scoring-summary">Punktacja <span class="scoring-help-icon">?</span></summary>
+      <table class="scoring-table">
+        <tr><td>3–4 litery</td><td>1 pkt</td></tr>
+        <tr><td>5 liter</td><td>2 pkt</td></tr>
+        <tr><td>6 liter</td><td>3 pkt</td></tr>
+        <tr><td>7 liter</td><td>5 pkt</td></tr>
+        <tr><td>8+ liter</td><td>11 pkt</td></tr>
+      </table>
+    </details>
   </div>
 
   <div class="results" id="results">
     <h2 id="resultsHeader">Znalezione słowa</h2>
     <div class="results-summary" id="resultsSummary"></div>
+    <div class="results-insights" id="resultsInsights"></div>
     <div class="word-list" id="wordList"></div>
     <div id="resultsScrollHint" class="results-scroll-hint">Przewiń w dół ↓</div>
   </div>
@@ -654,6 +813,7 @@ const reshuffleBtn = document.getElementById('reshuffleBtn');
 const showWordsBtn = document.getElementById('showWordsBtn');
 const resultsEl = document.getElementById('results');
 const resultsSummaryEl = document.getElementById('resultsSummary');
+const resultsInsightsEl = document.getElementById('resultsInsights');
 const wordListEl = document.getElementById('wordList');
 const resultsScrollHintEl = document.getElementById('resultsScrollHint');
 const playerWordInputEl = document.getElementById('playerWordInput');
@@ -672,6 +832,7 @@ let currentLangKey = null;
 let playerWords = [];
 let playerWordSet = new Set();
 let solverWords = null;
+let solverWordCells = {};
 let wordScoreState = {};
 let gameFinished = false;
 
@@ -764,6 +925,7 @@ function renderPlayerWords() {
             wordEl.target = '_blank';
             wordEl.rel = 'noopener';
             wordEl.className = 'player-word-link';
+            wordEl.dataset.word = key;
         } else {
             wordEl = document.createElement('span');
             wordEl.className = 'player-word-text';
@@ -820,6 +982,7 @@ function resetPlayerGameState() {
     playerWords = [];
     playerWordSet = new Set();
     solverWords = null;
+    solverWordCells = {};
     wordScoreState = {};
     gameFinished = false;
     playerWordInputEl.value = '';
@@ -866,6 +1029,7 @@ function hideResults() {
     resultsEl.classList.remove('visible');
     wordListEl.innerHTML = '';
     resultsSummaryEl.textContent = '';
+    resultsInsightsEl.innerHTML = '';
     resultsScrollHintEl.classList.remove('visible');
 }
 
@@ -876,6 +1040,32 @@ const resultsHeaders = {
 const resultsSummaryLabels = {
     pol: n => `${n} słów`, eng: n => `${n} words`,
     spa: n => `${n} palabras`, rus: n => `${n} слов`,
+};
+const resultsInsightLabels = {
+    pol: {
+        starts: 'Najczęściej na',
+        longest: 'Najdłuższe',
+        average: 'Średnia długość',
+        letters: n => `${n} liter`,
+    },
+    eng: {
+        starts: 'Most start with',
+        longest: 'Longest',
+        average: 'Average length',
+        letters: n => `${n} letters`,
+    },
+    spa: {
+        starts: 'Najwięcej na',
+        longest: 'Najdłuższe',
+        average: 'Średnia długość',
+        letters: n => `${n} letras`,
+    },
+    rus: {
+        starts: 'Чаще всего на',
+        longest: 'Самое длинное',
+        average: 'Средняя длина',
+        letters: n => `${n} букв`,
+    },
 };
 const letterLabels = {
     pol: n => `${n} liter`, eng: n => `${n} letters`,
@@ -889,12 +1079,55 @@ function getLangPrefix(langKey) {
     return 'eng';
 }
 
+function renderResultsInsights(words, prefix) {
+    resultsInsightsEl.innerHTML = '';
+    if (!words.length) return;
+
+    const labels = resultsInsightLabels[prefix] || resultsInsightLabels.eng;
+    const startCounts = new Map();
+    let totalLen = 0;
+    let maxLen = 0;
+
+    for (const word of words) {
+        totalLen += word.length;
+        maxLen = Math.max(maxLen, word.length);
+        const first = word[0];
+        startCounts.set(first, (startCounts.get(first) || 0) + 1);
+    }
+
+    const topStart = Array.from(startCounts.entries())
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+    const insights = [
+        [labels.starts, `${topStart[0].toLowerCase()} (${topStart[1]})`],
+        [labels.longest, labels.letters(maxLen)],
+        [labels.average, (totalLen / words.length).toFixed(1)],
+    ];
+
+    for (const [label, value] of insights) {
+        const row = document.createElement('div');
+        row.className = 'results-insight';
+
+        const labelEl = document.createElement('span');
+        labelEl.className = 'results-insight-label';
+        labelEl.textContent = label;
+
+        const valueEl = document.createElement('span');
+        valueEl.className = 'results-insight-value';
+        valueEl.textContent = value;
+
+        row.appendChild(labelEl);
+        row.appendChild(valueEl);
+        resultsInsightsEl.appendChild(row);
+    }
+}
+
 function showResults(words, dictCfg) {
     words.sort((a, b) => b.length - a.length || a.localeCompare(b));
 
     const prefix = getLangPrefix(currentLangKey);
     document.getElementById('resultsHeader').textContent = resultsHeaders[prefix] || resultsHeaders.eng;
     resultsSummaryEl.textContent = (resultsSummaryLabels[prefix] || resultsSummaryLabels.eng)(words.length);
+    renderResultsInsights(words, prefix);
     wordListEl.innerHTML = '';
 
     let lastLen = -1;
@@ -999,6 +1232,26 @@ function setupWordHover(wordCells) {
     });
 }
 
+function setupPlayerWordHover(wordCells) {
+    const diceEls = boardEl.querySelectorAll('.dice');
+    const playerWordLinks = playerWordListEl.querySelectorAll('[data-word]');
+
+    playerWordLinks.forEach(el => {
+        const paths = wordCells[el.dataset.word];
+        if (!paths || paths.length === 0) return;
+
+        const cellIndices = new Set();
+        for (const p of paths) for (const idx of p) cellIndices.add(idx);
+
+        el.addEventListener('mouseenter', () => {
+            for (const idx of cellIndices) diceEls[idx].classList.add('word-hover');
+        });
+        el.addEventListener('mouseleave', () => {
+            for (const idx of cellIndices) diceEls[idx].classList.remove('word-hover');
+        });
+    });
+}
+
 async function onTimerEnd() {
     if (!currentBoard) return;
 
@@ -1010,6 +1263,7 @@ async function onTimerEnd() {
 
     const { found, cellHits, cellWords, wordCells } = findWords(currentBoard, trie, 3);
     solverWords = found;
+    solverWordCells = wordCells;
     gameFinished = true;
     setPlayerWordStatus('');
     setPlayerInputEnabled(false);
@@ -1020,6 +1274,7 @@ async function onTimerEnd() {
     applyHeatmap(cellHits);
     setupDiceHover(cellWords);
     setupWordHover(wordCells);
+    setupPlayerWordHover(solverWordCells);
 }
 
 function createBoard(langKey) {
