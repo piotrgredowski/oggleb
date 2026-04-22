@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
-import type { Language } from './game';
+import type { Language, TrieNode } from './game';
 
 type DictionaryAsset = {
   script: string;
   globalName: string;
 };
 
+export type DictionaryTrie = TrieNode;
+
 type DictionaryStatus =
-  | { state: 'loading'; message: string }
-  | { state: 'ready'; message: string }
-  | { state: 'error'; message: string };
+  | { state: 'loading'; message: string; trie: null }
+  | { state: 'ready'; message: string; trie: DictionaryTrie }
+  | { state: 'error'; message: string; trie: null };
 
 declare global {
   interface Window {
@@ -85,24 +87,25 @@ export function useDictionary(language: Language): DictionaryStatus {
   const [status, setStatus] = useState<DictionaryStatus>({
     state: 'loading',
     message: 'Loading dictionary…',
+    trie: null,
   });
 
   useEffect(() => {
     let active = true;
-    setStatus({ state: 'loading', message: 'Loading dictionary…' });
+    setStatus({ state: 'loading', message: 'Loading dictionary…', trie: null });
 
     loadDictionary(language)
-      .then(() => {
+      .then((trie) => {
         if (!active) {
           return;
         }
-        setStatus({ state: 'ready', message: 'Dictionary ready' });
+        setStatus({ state: 'ready', message: 'Dictionary ready', trie: trie as DictionaryTrie });
       })
       .catch(() => {
         if (!active) {
           return;
         }
-        setStatus({ state: 'error', message: 'Dictionary failed to load' });
+        setStatus({ state: 'error', message: 'Dictionary failed to load', trie: null });
       });
 
     return () => {

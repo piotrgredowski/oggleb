@@ -22,9 +22,9 @@ test('solo live play starts cleanly and keeps solver output hidden', async ({ pa
   await expect(page.getByRole('heading', { level: 2, name: 'Solo round' })).toBeVisible();
   await expect(page.locator('[data-testid="board-cell"]')).toHaveCount(16);
   await expect(page.getByRole('textbox', { name: 'Word entry' })).toBeEnabled();
-  await expect(page.getByRole('button', { name: 'Reveal words' })).toBeDisabled();
   await expect(page.getByTestId('timer-chip')).toHaveText('03:00');
   await expect(page.getByTestId('solver-output')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Restart round' })).toBeVisible();
 
   await page.getByRole('textbox', { name: 'Word entry' }).fill('tree');
   await page.getByRole('button', { name: 'Add word' }).click();

@@ -20,7 +20,7 @@ test('desktop home keeps three primary modes above the fold and persists safe se
   await expect(page.getByRole('button', { name: /Multiplayer/ })).toBeVisible();
   await expect(page.locator('select')).toHaveValue('eng');
   await expect(page.getByText('4 min', { exact: true })).toBeVisible();
-  await expect(page.getByRole('textbox', { name: 'Word entry' })).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'Word entry' })).toBeDisabled();
 
   await page.getByRole('button', { name: 'TV Display' }).click();
   await expect(page.getByRole('heading', { level: 2, name: 'TV Display setup' })).toBeVisible();
@@ -76,7 +76,7 @@ test('mobile home keeps the three primary mode cards visible and duration clamps
   await expect(page).toHaveURL(/mode=multiplayer/);
   await page.goBack();
   await expect(page).toHaveURL(/mode=solo/);
-  await expect(page.getByRole('heading', { level: 3, name: 'Solo setup' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 3, name: 'Solo play setup' })).toBeVisible();
   await page.goForward();
   await expect(page).toHaveURL(/mode=multiplayer/);
   await expect(page.getByRole('heading', { level: 3, name: 'Multiplayer setup' })).toBeVisible();

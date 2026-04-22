@@ -3,13 +3,17 @@ import {
   buildQuery,
   clampDuration,
   createRandomSeed,
+  findWords,
   formatTimer,
   generateBoard,
   normalizeWord,
   readInitialState,
+  scoreWord,
+  sortWordsLongestFirst,
   type Language,
   type Mode,
   type SetupState,
+  type SolverResults,
 } from './game';
 import { useDictionary } from './useDictionary';
 
@@ -61,10 +65,14 @@ type SoloRound = {
   seed: number;
   board: ReturnType<typeof generateBoard>;
   remainingSeconds: number;
-  phase: 'booting' | 'live' | 'finished';
+  phase: 'booting' | 'live' | 'finishing' | 'finished';
   words: string[];
   wordSet: Set<string>;
   statusMessage: string;
+  solverResults: SolverResults | null;
+  completedBy: 'timeout' | 'reveal' | null;
+  scoringEnabled: Record<string, boolean>;
+  highlightedWord: string | null;
 };
 
 export function App() {
@@ -106,8 +114,12 @@ export function App() {
           return {
             ...current,
             remainingSeconds: 0,
-            phase: 'finished',
-            statusMessage: 'Round complete. Reveal and scoring land in the next slice.',
+            phase: 'finishing',
+            completedBy: 'timeout',
+            statusMessage:
+              dictionary.state === 'ready'
+                ? 'Time up. Preparing results…'
+                : 'Time up. Waiting for the dictionary so results can finish loading…',
           };
         }
 
@@ -121,7 +133,35 @@ export function App() {
         soloTimerRef.current = null;
       }
     };
-  }, [soloRound?.phase]);
+  }, [dictionary.state, soloRound?.phase]);
+
+  useEffect(() => {
+    if (!soloRound || soloRound.phase !== 'finishing' || dictionary.state !== 'ready' || !dictionary.trie) {
+      return;
+    }
+
+    setSoloRound((current) => {
+      if (!current || current.phase !== 'finishing' || !dictionary.trie) {
+        return current;
+      }
+
+      const solverResults = findWords(current.board, dictionary.trie);
+      const scoringEnabled = Object.fromEntries(
+        current.words.map((word) => [word, solverResults.found.has(word)]),
+      );
+
+      return {
+        ...current,
+        phase: 'finished',
+        solverResults,
+        scoringEnabled,
+        statusMessage:
+          current.completedBy === 'timeout'
+            ? 'Time up. Results and scoring are ready.'
+            : 'Reveal complete. Results and scoring are ready.',
+      };
+    });
+  }, [dictionary.state, dictionary.trie, soloRound]);
 
   function updateState(nextState: SetupState, historyMode: 'push' | 'replace' = 'replace') {
     setState(nextState);
@@ -160,6 +200,10 @@ export function App() {
       phase: 'booting',
       words: [],
       wordSet: new Set(),
+      solverResults: null,
+      completedBy: null,
+      scoringEnabled: {},
+      highlightedWord: null,
       statusMessage: 'Board ready. Start finding words.',
     });
 
@@ -205,6 +249,40 @@ export function App() {
     setWordInput('');
   }
 
+  function finalizeSoloRound(source: 'timeout' | 'reveal') {
+    setSoloRound((current) => {
+      if (!current || (current.phase !== 'live' && current.phase !== 'finishing')) {
+        return current;
+      }
+
+      const waitingForDictionary = dictionary.state !== 'ready' || !dictionary.trie;
+      const solverResults = waitingForDictionary ? current.solverResults : findWords(current.board, dictionary.trie);
+      const scoringEnabled = waitingForDictionary
+        ? current.scoringEnabled
+        : Object.fromEntries(current.words.map((word) => [word, solverResults?.found.has(word) ?? false]));
+
+      return {
+        ...current,
+        remainingSeconds: source === 'timeout' ? 0 : current.remainingSeconds,
+        phase: waitingForDictionary ? 'finishing' : 'finished',
+        completedBy: source,
+        solverResults,
+        scoringEnabled,
+        statusMessage: waitingForDictionary
+          ? source === 'timeout'
+            ? 'Time up. Waiting for the dictionary so results can finish loading…'
+            : 'Waiting for the dictionary so reveal can finish…'
+          : source === 'timeout'
+            ? 'Time up. Results and scoring are ready.'
+            : 'Reveal complete. Results and scoring are ready.',
+      };
+    });
+  }
+
+  function restartSoloRound() {
+    startSoloRound();
+  }
+
   function onWordKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key !== 'Enter') {
       return;
@@ -218,6 +296,28 @@ export function App() {
   const showSoloPlay = state.mode === 'solo' && soloRound !== null;
   const showModeGrid = !showSoloPlay;
   const showSoloSetupCard = state.mode === 'solo' && !showSoloPlay;
+  const solvedWords = soloRound?.solverResults ? sortWordsLongestFirst(soloRound.solverResults.found) : [];
+  const playerWordRows =
+    soloRound?.phase === 'finished' && soloRound.solverResults
+      ? soloRound.words.map((word) => {
+          const valid = soloRound.solverResults?.found.has(word) ?? false;
+          const enabled = valid && (soloRound.scoringEnabled[word] ?? true);
+          return {
+            word,
+            valid,
+            enabled,
+            points: enabled ? scoreWord(word) : 0,
+          };
+        })
+      : [];
+  const playerScore = playerWordRows.reduce((total, row) => total + row.points, 0);
+  const highlightedCells = new Set(
+    soloRound?.highlightedWord && soloRound.solverResults?.wordPaths[soloRound.highlightedWord]
+      ? soloRound.solverResults.wordPaths[soloRound.highlightedWord].flat()
+      : [],
+  );
+  const canRevealEarly = showSoloPlay && soloRound?.phase === 'live' && dictionary.state === 'ready';
+  const roundFinished = soloRound?.phase === 'finished';
 
   return (
     <main className="app-shell">
@@ -347,7 +447,7 @@ export function App() {
                 </div>
               </div>
               <label className="field">
-                <span>Word entry</span>
+                <span>Word entry (disabled until the round starts)</span>
                 <input
                   aria-label="Word entry"
                   disabled
@@ -368,7 +468,7 @@ export function App() {
           ) : null}
 
           {showSoloPlay && soloRound ? (
-            <div className={`solo-live-shell${timerUrgent ? ' final-seconds' : ''}`}>
+              <div className={`solo-live-shell${timerUrgent ? ' final-seconds' : ''}${roundFinished ? ' round-finished' : ''}`}>
               <div className="solo-live-header">
                 <div>
                   <div className="eyebrow">Solo live play</div>
@@ -396,7 +496,12 @@ export function App() {
                 }}
               >
                 {soloRound.board.cells.map((cell) => (
-                  <div key={cell.id} className="board-cell" data-testid="board-cell">
+                  <div
+                    key={cell.id}
+                    className={`board-cell${highlightedCells.has(Number(cell.id)) ? ' highlighted' : ''}`}
+                    data-testid="board-cell"
+                    data-highlighted={highlightedCells.has(Number(cell.id)) ? 'true' : 'false'}
+                  >
                     {cell.value}
                   </div>
                 ))}
@@ -410,7 +515,7 @@ export function App() {
                     value={wordInput}
                     onChange={(event) => setWordInput(event.target.value)}
                     onKeyDown={onWordKeyDown}
-                    placeholder={soloRound.phase === 'booting' ? 'Board booting…' : 'Type a word'}
+                    placeholder={soloRound.phase === 'booting' ? 'Board booting…' : roundFinished ? 'Round complete' : 'Type a word'}
                     disabled={soloRound.phase !== 'live'}
                   />
                 </label>
@@ -425,9 +530,13 @@ export function App() {
                 <button
                   type="button"
                   className="secondary-button"
-                  disabled={dictionary.state !== 'ready'}
+                  onClick={() => finalizeSoloRound('reveal')}
+                  disabled={!canRevealEarly}
                 >
                   Reveal words
+                </button>
+                <button type="button" className="secondary-button" onClick={restartSoloRound}>
+                  Restart round
                 </button>
               </div>
 
@@ -460,6 +569,113 @@ export function App() {
                   )}
                 </ul>
               </div>
+
+              {roundFinished && soloRound.solverResults ? (
+                <div className="results-shell" data-testid="solver-output">
+                  <div className="status-card">
+                    <div className="eyebrow">Round complete</div>
+                    <h3>Solo results</h3>
+                    <p className="hero-copy">
+                      {soloRound.completedBy === 'timeout'
+                        ? 'Timeout and manual reveal now share the same scoring and inspection surface.'
+                        : 'Manual reveal now lands on the same scoring and inspection surface as timeout.'}
+                    </p>
+                    <div className="results-summary-grid">
+                      <div className="summary-pill">Found words: {solvedWords.length}</div>
+                      <div className="summary-pill">Entered: {soloRound.words.length}</div>
+                      <div className="summary-pill" data-testid="player-score-total">
+                        Score: {playerScore}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="results-grid">
+                    <div className="status-card">
+                      <div className="eyebrow">Your words</div>
+                      <ul className="results-word-list" data-testid="player-results-list">
+                        {playerWordRows.length === 0 ? (
+                          <li className="word-list-empty">No words entered this round.</li>
+                        ) : (
+                          playerWordRows.map((row) => (
+                            <li key={row.word} className={`player-result-row ${row.valid ? 'valid' : 'invalid'}`}>
+                              <button
+                                type="button"
+                                className="result-word-button"
+                                disabled={!row.valid}
+                                onMouseEnter={() =>
+                                  setSoloRound((current) =>
+                                    current ? { ...current, highlightedWord: row.valid ? row.word : null } : current,
+                                  )
+                                }
+                                onMouseLeave={() =>
+                                  setSoloRound((current) =>
+                                    current?.highlightedWord ? { ...current, highlightedWord: null } : current,
+                                  )
+                                }
+                              >
+                                {row.word}
+                              </button>
+                              <span className={`result-state-pill ${row.valid ? 'valid' : 'invalid'}`}>
+                                {row.valid ? 'Valid' : 'Invalid'}
+                              </span>
+                              <span className="player-result-points">{row.points} pts</span>
+                              <label className="score-toggle">
+                                <input
+                                  aria-label={`Count ${row.word} as unique`}
+                                  type="checkbox"
+                                  checked={row.enabled}
+                                  disabled={!row.valid}
+                                  onChange={(event) =>
+                                    setSoloRound((current) =>
+                                      current
+                                        ? {
+                                            ...current,
+                                            scoringEnabled: {
+                                              ...current.scoringEnabled,
+                                              [row.word]: event.target.checked,
+                                            },
+                                          }
+                                        : current,
+                                    )
+                                  }
+                                />
+                                unique
+                              </label>
+                            </li>
+                          ))
+                        )}
+                      </ul>
+                    </div>
+
+                    <div className="status-card">
+                      <div className="eyebrow">Solver output</div>
+                      <p className="hero-copy">Sorted longest to shortest so the answer list is easy to scan.</p>
+                      <ol className="results-word-list" data-testid="solver-results-list">
+                        {solvedWords.map((word) => (
+                          <li key={word}>
+                            <button
+                              type="button"
+                              className="result-word-button"
+                              onMouseEnter={() =>
+                                setSoloRound((current) =>
+                                  current ? { ...current, highlightedWord: word } : current,
+                                )
+                              }
+                              onMouseLeave={() =>
+                                setSoloRound((current) =>
+                                  current?.highlightedWord ? { ...current, highlightedWord: null } : current,
+                                )
+                              }
+                            >
+                              {word}
+                            </button>
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ) : null}
 

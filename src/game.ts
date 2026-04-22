@@ -7,6 +7,27 @@ export type SetupState = {
   mode: Mode;
 };
 
+export type TrieNode = {
+  $?: 1;
+  [key: string]: TrieNode | 1 | undefined;
+};
+
+export type BoardCell = {
+  id: string;
+  value: string;
+};
+
+export type Board = {
+  rows: number;
+  cols: number;
+  cells: BoardCell[];
+};
+
+export type SolverResults = {
+  found: Set<string>;
+  wordPaths: Record<string, number[][]>;
+};
+
 type BoardSpec = {
   rows: number;
   cols: number;
@@ -106,7 +127,7 @@ function getRandomLetter(die: string, rng: () => number): string {
   return die[Math.floor(rng() * die.length)] ?? die[0] ?? '';
 }
 
-export function generateBoard(lang: Language, seed: number) {
+export function generateBoard(lang: Language, seed: number): Board {
   const spec = boardSpecs[lang];
   const dice = spec.dice.match(/.{1,6}/g) ?? [];
   const rng = createSeededRandom(seed);
@@ -134,4 +155,99 @@ export function formatTimer(totalSeconds: number): string {
 
 export function normalizeWord(value: string): string {
   return value.trim().toLocaleUpperCase();
+}
+
+export function scoreWord(word: string): number {
+  const len = word.length;
+  if (len < 3) return 0;
+  if (len <= 4) return 1;
+  if (len === 5) return 2;
+  if (len === 6) return 3;
+  if (len === 7) return 5;
+  return 11;
+}
+
+export function sortWordsLongestFirst(words: Iterable<string>): string[] {
+  return [...words].sort((left, right) => right.length - left.length || left.localeCompare(right));
+}
+
+export function findWords(board: Board, trie: TrieNode, minLength = 3): SolverResults {
+  const visited = Array.from({ length: board.cells.length }, () => false);
+  const found = new Set<string>();
+  const wordPaths: Record<string, number[][]> = {};
+  const path: number[] = [];
+
+  function record(word: string) {
+    if (!wordPaths[word]) {
+      wordPaths[word] = [];
+    }
+    wordPaths[word].push([...path]);
+  }
+
+  function step(index: number, node: TrieNode, word: string) {
+    if (visited[index]) {
+      return;
+    }
+
+    const value = board.cells[index]?.value;
+    if (!value) {
+      return;
+    }
+
+    const next = node[value];
+    if (!next) {
+      return;
+    }
+
+    const nextWord = word + value;
+    path.push(index);
+
+    if (next === 1) {
+      if (nextWord.length >= minLength) {
+        found.add(nextWord);
+        record(nextWord);
+      }
+      path.pop();
+      return;
+    }
+
+    if (next.$ && nextWord.length >= minLength) {
+      found.add(nextWord);
+      record(nextWord);
+    }
+
+    visited[index] = true;
+    const row = Math.floor(index / board.cols);
+    const col = index % board.cols;
+
+    for (let rowOffset = -1; rowOffset <= 1; rowOffset += 1) {
+      for (let colOffset = -1; colOffset <= 1; colOffset += 1) {
+        if (rowOffset === 0 && colOffset === 0) {
+          continue;
+        }
+
+        const nextRow = row + rowOffset;
+        const nextCol = col + colOffset;
+        if (
+          nextRow < 0 ||
+          nextRow >= board.rows ||
+          nextCol < 0 ||
+          nextCol >= board.cols
+        ) {
+          continue;
+        }
+
+        step(nextRow * board.cols + nextCol, next, nextWord);
+      }
+    }
+
+    visited[index] = false;
+    path.pop();
+  }
+
+  for (let index = 0; index < board.cells.length; index += 1) {
+    step(index, trie, '');
+  }
+
+  return { found, wordPaths };
 }
