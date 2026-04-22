@@ -1,28 +1,48 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 type Mode = 'solo' | 'tv' | 'multiplayer';
-type Surface = 'shell' | 'legacy';
 type Language = 'pol' | 'eng' | 'spa' | 'rus';
 
 type SetupState = {
   lang: Language;
   durationSeconds: number;
   mode: Mode;
-  surface: Surface;
 };
 
-const modeCopy: Record<Mode, { title: string; description: string }> = {
+const modeCopy: Record<
+  Mode,
+  {
+    title: string;
+    eyebrow: string;
+    description: string;
+    bullets: string[];
+    primaryAction: string;
+    note: string;
+  }
+> = {
   solo: {
     title: 'Solo',
-    description: 'One-player rounds with modern setup, play, and results flows.',
+    eyebrow: 'Practice on your own',
+    description: 'One-player rounds with fast setup, local scoring, and a focused play surface.',
+    bullets: ['Personal timer and safe setup memory', 'No shared links required', 'Built for desktop and phone'],
+    primaryAction: 'Solo play setup',
+    note: 'This home screen remembers your language and timer choices without starting a round.',
   },
   tv: {
     title: 'TV Display',
-    description: 'Read-only presentation surface for board and timer visibility.',
+    eyebrow: 'Board + timer only',
+    description: 'A distance-readable board and countdown surface for a monitor or shared screen.',
+    bullets: ['Presentation-only layout', 'Pairs with local phone play later', 'Keeps private controls out of view'],
+    primaryAction: 'TV Display setup',
+    note: 'Setup stays editable here so a TV session can be prepared safely before play starts.',
   },
   multiplayer: {
     title: 'Multiplayer',
-    description: 'Foundation for same-device and shared-code play without a backend.',
+    eyebrow: 'Same room, no backend',
+    description: 'Host, join, or pass a device around once the multiplayer flows land in later slices.',
+    bullets: ['Shared-code and same-device paths', 'Backend-free round identity', 'Pre-game setup only in this slice'],
+    primaryAction: 'Multiplayer setup',
+    note: 'Home keeps the multiplayer entry prominent without exposing lobby or live-round UI yet.',
   },
 };
 
@@ -45,13 +65,11 @@ function readInitialState(): SetupState {
   const lang = params.get('lang');
   const duration = Number(params.get('t'));
   const mode = params.get('mode');
-  const surface = params.get('surface');
 
   return {
     lang: isLanguage(lang) ? lang : 'pol',
     durationSeconds: Number.isFinite(duration) ? clampDuration(duration) : 180,
     mode: isMode(mode) ? mode : 'solo',
-    surface: surface === 'legacy' ? 'legacy' : 'shell',
   };
 }
 
@@ -69,162 +87,169 @@ function buildQuery(state: SetupState): string {
   params.set('t', String(state.durationSeconds));
   params.set('mode', state.mode);
 
-  if (state.surface === 'legacy') {
-    params.set('surface', 'legacy');
-  }
-
   return params.toString();
-}
-
-function buildLegacyUrl(state: SetupState): string {
-  const params = new URLSearchParams();
-  params.set('lang', state.lang);
-  params.set('t', String(state.durationSeconds));
-  return `./legacy.html?${params.toString()}`;
 }
 
 export function App() {
   const [state, setState] = useState<SetupState>(() => readInitialState());
-
-  const legacyUrl = useMemo(() => buildLegacyUrl(state), [state]);
   const selectedModeCopy = modeCopy[state.mode];
+  const modeCards = useMemo(() => Object.keys(modeCopy) as Mode[], []);
 
-  function updateState(nextState: SetupState) {
+  useEffect(() => {
+    const onPopState = () => {
+      setState(readInitialState());
+    };
+
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  function updateState(nextState: SetupState, historyMode: 'push' | 'replace' = 'replace') {
     setState(nextState);
     const query = buildQuery(nextState);
-    window.history.replaceState(null, '', `${window.location.pathname}?${query}`);
+    const nextUrl = `${window.location.pathname}?${query}`;
+
+    if (historyMode === 'push') {
+      window.history.pushState(null, '', nextUrl);
+      return;
+    }
+
+    window.history.replaceState(null, '', nextUrl);
   }
 
-  function patchState(patch: Partial<SetupState>) {
-    updateState({ ...state, ...patch });
+  function patchState(patch: Partial<SetupState>, historyMode: 'push' | 'replace' = 'replace') {
+    updateState({ ...state, ...patch }, historyMode);
   }
 
   return (
     <main className="app-shell">
-      <section className="hero-card">
-        <div className="eyebrow">Static web app foundation</div>
-        <h1>Oggleb redesign bootstrap</h1>
-        <p className="hero-copy">
-          React + TypeScript + Vite now hosts the redesign shell while the current deterministic
-          board, local dictionaries, and single-file game remain available behind a legacy bridge.
-        </p>
+      <section className="hero-card hero-layout">
+        <div>
+          <div className="eyebrow">Redesigned home</div>
+          <h1>Choose how you want to play</h1>
+          <p className="hero-copy">
+            Solo, TV Display, and Multiplayer stay visible above the fold while safe pre-game setup
+            choices persist in the URL for refreshes and deep links.
+          </p>
+        </div>
+        <div className="hero-summary" aria-label="Current setup summary">
+          <div className="summary-pill">Language: {languageOptions.find((option) => option.value === state.lang)?.label}</div>
+          <div className="summary-pill">Timer: {Math.floor(state.durationSeconds / 60)} min</div>
+          <div className="summary-pill">Mode: {selectedModeCopy.title}</div>
+        </div>
       </section>
 
-      <section className="shell-grid">
-        <section className="panel">
+      <section className="mode-shell">
+        <section className="mode-panel">
           <div className="panel-heading">
-            <h2>Modes</h2>
-            <p>Choose the redesign surface to continue building.</p>
+            <h2>Pick a mode</h2>
+            <p>Each card opens a dedicated setup view without exposing live round UI too early.</p>
           </div>
           <div className="mode-grid">
-            {(Object.keys(modeCopy) as Mode[]).map((mode) => {
+            {modeCards.map((mode) => {
+              const copy = modeCopy[mode];
               const active = state.mode === mode;
               return (
                 <button
                   key={mode}
                   type="button"
                   className={`mode-card${active ? ' active' : ''}`}
-                  onClick={() => patchState({ mode, surface: 'shell' })}
+                  aria-pressed={active}
+                  onClick={() => patchState({ mode }, 'push')}
                 >
-                  <span className="mode-title">{modeCopy[mode].title}</span>
-                  <span className="mode-description">{modeCopy[mode].description}</span>
+                  <span className="mode-eyebrow">{copy.eyebrow}</span>
+                  <span className="mode-title">{copy.title}</span>
+                  <span className="mode-description">{copy.description}</span>
                 </button>
               );
             })}
           </div>
         </section>
 
-        <section className="panel">
+        <section className="panel setup-panel">
           <div className="panel-heading">
-            <h2>Setup state</h2>
-            <p>These values already persist in the URL for future screen work.</p>
+            <h2>{selectedModeCopy.primaryAction}</h2>
+            <p>{selectedModeCopy.note}</p>
           </div>
 
-          <label className="field">
-            <span>Language</span>
-            <select
-              value={state.lang}
-              onChange={(event) => patchState({ lang: event.target.value as Language })}
-            >
-              {languageOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <div className="setup-grid">
+            <label className="field">
+              <span>Language</span>
+              <select
+                aria-label="Language"
+                value={state.lang}
+                onChange={(event) => patchState({ lang: event.target.value as Language })}
+              >
+                {languageOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <div className="field">
-            <span>Round length</span>
-            <div className="duration-row">
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() =>
-                  patchState({ durationSeconds: clampDuration(state.durationSeconds - 60) })
-                }
-              >
-                −1 min
-              </button>
-              <strong>{Math.floor(state.durationSeconds / 60)} min</strong>
-              <button
-                type="button"
-                className="secondary-button"
-                onClick={() =>
-                  patchState({ durationSeconds: clampDuration(state.durationSeconds + 60) })
-                }
-              >
-                +1 min
-              </button>
+            <div className="field">
+              <span>Round length</span>
+              <div className="duration-row">
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() =>
+                    patchState({ durationSeconds: clampDuration(state.durationSeconds - 60) })
+                  }
+                >
+                  −1 min
+                </button>
+                <strong aria-live="polite">{Math.floor(state.durationSeconds / 60)} min</strong>
+                <button
+                  type="button"
+                  className="secondary-button"
+                  onClick={() =>
+                    patchState({ durationSeconds: clampDuration(state.durationSeconds + 60) })
+                  }
+                >
+                  +1 min
+                </button>
+              </div>
+              <p className="field-note">Clamped from 1 to 10 minutes so setup stays valid.</p>
             </div>
           </div>
 
           <div className="status-card">
-            <h3>{selectedModeCopy.title}</h3>
-            <p>{selectedModeCopy.description}</p>
-            <p className="status-note">
-              This foundation keeps the current game logic reachable while later features replace the
-              placeholder shell with dedicated mode controllers.
+            <div className="eyebrow">{selectedModeCopy.eyebrow}</div>
+            <h3>{selectedModeCopy.title} setup</h3>
+        <p className="hero-copy">
+              {selectedModeCopy.description}
             </p>
-          </div>
-
-          <div className="action-row">
-            <button type="button" className="primary-button" onClick={() => patchState({ surface: 'legacy' })}>
-              Launch classic board
-            </button>
-            {state.surface === 'legacy' ? (
-              <button type="button" className="secondary-button" onClick={() => patchState({ surface: 'shell' })}>
-                Back to shell
+            <ul className="bullet-list">
+              {selectedModeCopy.bullets.map((bullet) => (
+                <li key={bullet}>{bullet}</li>
+              ))}
+            </ul>
+            <div className="action-row">
+              <button type="button" className="primary-button">
+                Coming in the next slice
               </button>
-            ) : null}
+            </div>
           </div>
         </section>
       </section>
 
       <section className="panel">
         <div className="panel-heading">
-          <h2>Migration bridge</h2>
+          <h2>URL-backed setup</h2>
           <p>
-            The embedded legacy surface below runs the existing single-file game entry with local trie
-            assets, preserving deterministic gameplay during the redesign.
+            Refreshing or deep-linking with safe setup params restores this home surface without
+            auto-starting a round.
           </p>
         </div>
-
-        {state.surface === 'legacy' ? (
-          <iframe
-            className="legacy-frame"
-            title="Legacy Oggleb board"
-            src={legacyUrl}
-          />
-        ) : (
-          <div className="placeholder-card">
-            <p>
-              The redesign shell is active. Use <strong>Launch classic board</strong> to open the
-              current implementation inside the new app foundation.
-            </p>
-            <code>{window.location.pathname}?{buildQuery(state)}</code>
-          </div>
-        )}
+        <div className="placeholder-card">
+          <p>
+            Safe params persist for language, timer, and selected home mode only. No board, score,
+            word entry, or results state appears before play begins.
+          </p>
+          <code>{window.location.pathname}?{buildQuery(state)}</code>
+        </div>
       </section>
     </main>
   );
