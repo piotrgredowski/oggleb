@@ -26,6 +26,7 @@ Testing surface, tooling guidance, and runtime validation notes.
 - Use browser automation (`agent-browser` / Playwright-based browser checks)
 - Prefer isolated browser contexts or tabs per participant/device role
 - Always capture console errors
+- If browser tooling reports a shared-profile lock, prefer isolated browser execution; if that is unavailable, use the Playwright e2e runtime as the fallback validation path and capture the reason in evidence
 - For shared-code checks, also capture URLs and network activity to prove the round is backend-free
 
 ## Validation Concurrency
