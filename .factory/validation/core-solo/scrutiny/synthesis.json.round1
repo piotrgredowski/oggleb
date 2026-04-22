@@ -1,0 +1,54 @@
+{
+  "milestone": "core-solo",
+  "round": 1,
+  "status": "fail",
+  "validatorsRun": {
+    "test": {
+      "passed": true,
+      "command": "npm run test:e2e -- --workers=2",
+      "exitCode": 0
+    },
+    "typecheck": {
+      "passed": true,
+      "command": "npm run typecheck",
+      "exitCode": 0
+    },
+    "lint": {
+      "passed": true,
+      "command": "npm run lint",
+      "exitCode": 0
+    }
+  },
+  "reviewsSummary": {
+    "total": 4,
+    "passed": 3,
+    "failed": 1,
+    "failedFeatures": [
+      "implement-solo-live-play-surface"
+    ]
+  },
+  "blockingIssues": [
+    {
+      "featureId": "implement-solo-live-play-surface",
+      "severity": "blocking",
+      "description": "If the trie fails to load, reveal/timeout leaves the round stuck in `finishing` forever instead of surfacing a clear end-state error. `finalizeSoloRound()` moves the round to `phase: 'finishing'` for any non-ready dictionary state, but the follow-up effect only resolves when `dictionary.state === 'ready'`, so the permanent error case never reaches a terminal visible failure state."
+    }
+  ],
+  "appliedUpdates": [
+    {
+      "target": "library",
+      "description": "Updated `.factory/library/user-testing.md` to note that built-in Playwright browser navigation may block direct `file://` URLs in this environment and that validators should fall back to Playwright test runtime or manual browser checks for file-protocol validation.",
+      "sourceFeature": "bootstrap-static-web-app-foundation"
+    }
+  ],
+  "suggestedGuidanceUpdates": [
+    {
+      "target": "web-game-worker skill",
+      "suggestion": "Document Playwright browser tools as an accepted fallback when `agent-browser` is blocked by local daemon, socket, or session issues.",
+      "evidence": "The `build-home-shell-and-url-backed-setup` review cites the worker handoff deviation where `agent-browser` could not start reliably due to a stale local socket, so the worker used built-in Playwright browser tools instead.",
+      "isSystemic": false
+    }
+  ],
+  "rejectedObservations": [],
+  "previousRound": null
+}
