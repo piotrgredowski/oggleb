@@ -1,0 +1,2340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Boggle Multi-Language Board</title>
+<style>
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  :root {
+    --board-cell-size: 60px;
+    --board-gap: 12px;
+    --app-height: 100vh;
+    --composer-safe-bottom: 0px;
+  }
+
+  body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: sans-serif;
+    margin: 20px;
+    width: 100%;
+    min-height: var(--app-height);
+    box-sizing: border-box;
+    transition: background 0.3s, color 0.3s;
+    background: #121826;
+    color: #fff;
+  }
+
+  .layout {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 20px;
+    width: 100%;
+    max-width: 1500px;
+  }
+
+  .sidebar {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    width: min(320px, 100%);
+  }
+
+  .app-title {
+    margin: 0 0 8px;
+    font-size: 1.8rem;
+    width: 100%;
+    text-align: center;
+    line-height: 1.1;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.35);
+  }
+
+  .sidebar label {
+    font-size: 0.95rem;
+  }
+
+  .sidebar select {
+    font-size: 1rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: #1f1f1f;
+    color: #ffeb3b;
+  }
+
+  #timer {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #ffeb3b;
+  }
+
+  .timer-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .timer-controls {
+    display: flex;
+    gap: 8px;
+  }
+
+  .timer-btn {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    font-size: 0.7rem;
+    line-height: 1;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.4;
+  }
+
+  #dictStatus {
+    font-size: 0.8rem;
+    opacity: 0.6;
+    min-height: 1.2em;
+  }
+
+  button {
+    padding: 8px 16px;
+    font-size: 1rem;
+    border-radius: 6px;
+    cursor: pointer;
+    border: none;
+    background-color: #1a73e8;
+    color: white;
+    transition: background 0.3s;
+  }
+
+  button:hover {
+    background-color: #135ac2;
+  }
+
+  .main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    flex: 0 1 auto;
+  }
+
+  .controls-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: rgba(15,15,15,0.62);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    backdrop-filter: blur(4px);
+  }
+
+  .control-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .control-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .control-label {
+    font-size: 0.95rem;
+  }
+
+  #board {
+    display: grid;
+    gap: var(--board-gap);
+    perspective: 600px;
+  }
+
+  .dice {
+    width: var(--board-cell-size);
+    height: var(--board-cell-size);
+    border-radius: calc(var(--board-cell-size) * 0.16);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: calc(var(--board-cell-size) * 0.42);
+    font-weight: bold;
+    -webkit-text-stroke: 0.5px black;
+    paint-order: stroke fill;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    transform-style: preserve-3d;
+    cursor: pointer;
+    transition: background 0.3s, color 0.3s, box-shadow 0.3s;
+    background: #1f1f1f;
+    color: #ffeb3b;
+  }
+
+  .dice.finished {
+    color: #4caf50;
+  }
+
+  .dice.urgent {
+    animation: urgent-pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes urgent-pulse {
+    0%, 100% { color: #ffeb3b; }
+    50% { color: #f44336; }
+  }
+
+  .rolling {
+    animation: roll 0.8s infinite;
+  }
+
+  @keyframes roll {
+    0% { transform: rotateX(0deg) rotateY(0deg); }
+    25% { transform: rotateX(180deg) rotateY(0deg); }
+    50% { transform: rotateX(180deg) rotateY(180deg); }
+    75% { transform: rotateX(0deg) rotateY(180deg); }
+    100% { transform: rotateX(0deg) rotateY(0deg); }
+  }
+
+  /* Results column */
+  .results {
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 280px;
+    max-width: 420px;
+    width: min(420px, 100%);
+    padding: 16px;
+    border-radius: 18px;
+    background: rgba(15,15,15,0.62);
+    box-shadow: 0 12px 34px rgba(0,0,0,0.18);
+    backdrop-filter: blur(5px);
+  }
+
+  .results.visible {
+    display: flex;
+  }
+
+  .results h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    text-align: center;
+  }
+
+  .results-summary {
+    font-size: 0.95rem;
+    opacity: 0.85;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+
+  .results-insights {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.06);
+    font-size: 0.84rem;
+  }
+
+  .results-insight {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .results-insight-label {
+    opacity: 0.72;
+  }
+
+  .results-insight-value {
+    font-weight: bold;
+    text-align: right;
+  }
+
+  .word-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(95px, 1fr));
+    gap: 8px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 6px;
+    align-content: start;
+  }
+
+  .word-list a {
+    display: block;
+    font-size: 0.95rem;
+    font-family: monospace;
+    text-decoration: none;
+    color: #ccc;
+    opacity: 0.95;
+    transition: opacity 0.15s, background 0.15s, transform 0.15s;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: rgba(255,255,255,0.18);
+  }
+
+  .word-list a:hover {
+    opacity: 1;
+    color: #fff;
+    text-decoration: underline;
+    transform: translateY(-1px);
+  }
+
+  .word-list a.highlight {
+    background: rgba(255, 152, 0, 0.5);
+    opacity: 1;
+  }
+
+  .dice.word-hover {
+    outline: 3px solid #ff9800;
+    outline-offset: -1px;
+  }
+
+  .word-group-label {
+    grid-column: 1 / -1;
+    font-size: 0.82rem;
+    font-weight: bold;
+    opacity: 0.7;
+    margin-top: 8px;
+    border-bottom: 1px solid currentColor;
+    padding-bottom: 4px;
+  }
+
+  .results-scroll-hint {
+    position: sticky;
+    bottom: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    margin-top: -2px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    font-size: 0.82rem;
+    font-weight: bold;
+    background: linear-gradient(to bottom, rgba(15,15,15,0), rgba(15,15,15,0.92) 45%, rgba(15,15,15,0.98));
+    text-shadow: 0 1px 0 rgba(0,0,0,0.15);
+  }
+
+  .results-scroll-hint.visible {
+    display: flex;
+  }
+
+  /* Desktop: side-by-side layout */
+  @media (min-width: 768px) {
+    .layout {
+      flex-direction: row;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 48px;
+    }
+
+    .sidebar {
+      min-width: 260px;
+      position: sticky;
+      top: 20px;
+      height: calc(100vh - 40px);
+    }
+
+    .app-title {
+      font-size: 2rem;
+    }
+
+    .player-panel {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+
+    .main {
+      min-width: 420px;
+    }
+
+    .results {
+      position: sticky;
+      top: 20px;
+      height: calc(100vh - 40px);
+    }
+  }
+
+  .footer-info {
+    position: fixed;
+    bottom: 16px;
+    left: 16px;
+    max-width: 25vw;
+    font-size: 0.81vw;
+    opacity: 0.65;
+    line-height: 1.4;
+    text-shadow: 0 0 3px black, 0 0 3px black;
+    z-index: -1;
+  }
+
+  .footer-info a {
+    color: inherit;
+  }
+
+.scoring-help {
+  width:min(100%, 320px);
+  margin-inline:auto;
+}
+.scoring-summary {
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  width:100%;
+  padding:0;
+  border:none;
+  background:none;
+  color:inherit;
+  box-shadow:none;
+  font-size:0.82rem;
+  font-weight:bold;
+  letter-spacing:0.08em;
+  text-transform:uppercase;
+}
+.scoring-summary:hover {
+  background:none;
+}
+.scoring-summary::-webkit-details-marker {
+  display:none;
+}
+.scoring-help-icon {
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:20px;
+  height:20px;
+  border-radius:999px;
+  background:rgba(12,12,12,0.45);
+  font-size:0.85rem;
+  font-weight:bold;
+}
+.scoring-table {
+  width:min(100%, 320px);
+  margin:10px auto 0;
+  border-collapse:separate;
+  border-spacing:0;
+  font-size:0.92rem;
+  background:rgba(12,12,12,0.5);
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 10px 24px rgba(0,0,0,0.18);
+  backdrop-filter:blur(4px);
+}
+.scoring-table td {
+  padding:6px 12px;
+  border-bottom:1px solid rgba(255,255,255,0.08);
+}
+.scoring-table tr:last-child td { border-bottom:none; }
+.scoring-table td:first-child { opacity:0.9; }
+.scoring-table td:last-child {
+  text-align:right;
+  font-weight:bold;
+  color:#ffeb3b;
+  font-variant-numeric:tabular-nums;
+}
+.player-panel { width:100%; display:flex; flex-direction:column; gap:6px; margin:2px 0 8px; }
+.player-entry { display:flex; gap:6px; width:100%; }
+.player-entry input { flex:1; min-width:0; padding:6px 9px; font-size:0.92rem; border-radius:6px; border:none; }
+.mobile-icon-btn::before { content: none; }
+.secondary-btn { padding:6px 10px; font-size:0.88rem; white-space:nowrap; }
+.player-word-status { min-height:1em; font-size:0.74rem; opacity:0.75; }
+.player-word-toggle { display:none; width:100%; }
+.player-word-toggle[hidden] { display:none !important; }
+.player-score-tools { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:0; }
+.player-word-list { display:flex; flex-direction:column; gap:4px; flex:1 1 auto; min-height:220px; overflow-y:auto; }
+.player-word-empty { font-size:0.82rem; opacity:0.6; }
+.player-panel.is-empty .player-score-tools { display:none; }
+.player-panel.is-empty .player-word-list { min-height:0; }
+.player-word-row { display:flex; align-items:center; gap:10px; padding:5px 8px; border-radius:8px; background:rgba(15,15,15,0.62); }
+.player-word-link, .player-word-text { flex:1 1 auto; min-width:0; font-family:monospace; font-size:0.9rem; color:inherit; text-decoration:none; }
+.player-word-link:hover { text-decoration:underline; }
+.player-word-link.non-unique, .player-word-text.non-unique { text-decoration:line-through; opacity:0.6; }
+.player-word-link.non-unique:hover { text-decoration:line-through; }
+.player-word-controls { display:flex; align-items:center; justify-content:flex-end; gap:4px; flex:0 0 auto; margin-left:auto; white-space:nowrap; font-size:0.76rem; opacity:0.9; }
+.player-word-controls input { margin:0; }
+.player-word-issue { flex:0 0 auto; font-size:0.9rem; color:#ff8a8a; white-space:nowrap; cursor:help; }
+.player-word-points { flex:0 0 auto; min-width:40px; text-align:right; font-weight:bold; font-size:0.76rem; white-space:nowrap; }
+.player-score-summary { min-height:1.2em; font-size:0.9rem; font-weight:bold; }
+.start-panel {
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  width:min(100%, 520px);
+  padding:14px 16px;
+  border-radius:16px;
+  background:rgba(15,15,15,0.72);
+  box-shadow:0 12px 34px rgba(0,0,0,0.18);
+  backdrop-filter:blur(5px);
+}
+.start-panel[hidden] {
+  display:none;
+}
+.start-panel-copy {
+  margin:0;
+  text-align:center;
+  opacity:0.84;
+  font-size:0.95rem;
+}
+.start-panel-actions {
+  display:flex;
+  justify-content:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+.share-panel {
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+  width:min(100%, 760px);
+  padding:12px 14px;
+  border-radius:14px;
+  background:rgba(15,15,15,0.62);
+  box-shadow:0 10px 30px rgba(0,0,0,0.15);
+  backdrop-filter:blur(4px);
+}
+.share-row {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  align-items:center;
+}
+.share-row input {
+  flex:1 1 220px;
+  min-width:0;
+  padding:7px 10px;
+  font-size:0.9rem;
+  border-radius:8px;
+  border:none;
+}
+.share-code-output {
+  font-family:monospace;
+}
+.share-status {
+  min-height:1.1em;
+  font-size:0.8rem;
+  opacity:0.75;
+}
+.share-status.error {
+  color:#ff8a8a;
+  opacity:1;
+}
+.shared-lobby {
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  width:min(100%, 520px);
+  padding:14px 16px;
+  border-radius:16px;
+  background:rgba(15,15,15,0.72);
+  box-shadow:0 12px 34px rgba(0,0,0,0.18);
+  backdrop-filter:blur(5px);
+}
+.shared-lobby[hidden] {
+  display:none;
+}
+.shared-lobby-title {
+  margin:0;
+  font-size:1.05rem;
+  font-weight:bold;
+  text-align:center;
+}
+.shared-lobby-grid {
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(120px, 1fr));
+  gap:10px;
+}
+.shared-lobby-item {
+  display:flex;
+  flex-direction:column;
+  gap:4px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:rgba(255,255,255,0.06);
+}
+.shared-lobby-label {
+  font-size:0.76rem;
+  opacity:0.68;
+  text-transform:uppercase;
+  letter-spacing:0.06em;
+}
+.shared-lobby-value {
+  font-size:0.98rem;
+  font-weight:bold;
+  overflow-wrap:anywhere;
+}
+.shared-lobby-actions {
+  display:flex;
+  justify-content:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+#board.board-hidden {
+  display:none;
+}
+
+  @media (max-width: 767px) {
+    html,
+    body {
+      overflow-x: hidden;
+      max-width: 100%;
+    }
+
+    body {
+      width: auto;
+      margin: 8px 12px 12px;
+      min-height: var(--app-height);
+      padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
+    }
+
+    .layout {
+      gap: 10px;
+    }
+
+    .app-title {
+      display: none;
+    }
+
+    .sidebar,
+    .results {
+      width: 100%;
+      min-width: 0;
+      max-width: none;
+    }
+
+    .main {
+      order: 1;
+      width: 100%;
+      gap: 8px;
+      align-items: stretch;
+    }
+
+    .main > .controls-bar {
+      order: 1;
+    }
+
+    .main > #board {
+      order: 5;
+    }
+
+    .main > .start-panel {
+      order: 2;
+    }
+
+    #board {
+      margin-inline: auto;
+    }
+
+    .main > .share-panel {
+      order: 3;
+    }
+
+    .main > .shared-lobby {
+      order: 4;
+    }
+
+    .main > .scoring-help {
+      order: 6;
+    }
+
+    .sidebar {
+      order: 2;
+      gap: 8px;
+      position: sticky;
+      bottom: max(var(--composer-safe-bottom), env(safe-area-inset-bottom));
+      z-index: 5;
+    }
+
+    .results {
+      order: 3;
+      padding: 12px;
+    }
+
+    .controls-bar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 6px 8px;
+      padding: 8px 10px;
+      border-radius: 12px;
+      align-items: center;
+    }
+
+    .control-group {
+      min-width: 0;
+    }
+
+    .control-group label {
+      display: none;
+    }
+
+    .control-group select {
+      width: 100%;
+      min-width: 0;
+    }
+
+    .timer-row,
+    .control-actions,
+    .timer-controls {
+      gap: 4px;
+    }
+
+    .timer-row {
+      justify-self: center;
+    }
+
+    .control-actions {
+      justify-self: end;
+      flex-wrap: nowrap;
+    }
+
+    #dictStatus {
+      grid-column: 1 / -1;
+      text-align: center;
+      min-height: 1em;
+    }
+
+    .control-label,
+    .sidebar label,
+    .sidebar select,
+    button {
+      font-size: 0.88rem;
+    }
+
+    button {
+      padding: 6px 10px;
+    }
+
+    .mobile-icon-btn {
+      min-width: 40px;
+      padding: 6px 9px;
+      font-size: 0;
+      line-height: 1;
+    }
+
+    .mobile-icon-btn::before {
+      content: attr(data-mobile-icon);
+      font-size: 1rem;
+      line-height: 1;
+    }
+
+    .timer-btn {
+      width: 18px;
+      height: 18px;
+      font-size: 0.65rem;
+    }
+
+    #timer {
+      font-size: 1.55rem;
+    }
+
+    .player-panel {
+      gap: 6px;
+      margin: 0;
+      padding: 10px;
+      border-radius: 14px;
+    }
+
+    .player-entry {
+      gap: 8px;
+    }
+
+    .player-entry input {
+      padding: 9px 12px;
+      font-size: 1rem;
+    }
+
+    .player-word-status {
+      min-height: 1.1em;
+      padding-left: 2px;
+    }
+
+    .player-word-toggle {
+      display: block;
+      padding-inline: 12px;
+    }
+
+    .player-word-list {
+      min-height: 96px;
+      max-height: min(28vh, 220px);
+    }
+
+    .start-panel,
+    .share-panel {
+      padding:10px 12px;
+      gap:8px;
+    }
+
+    .start-panel {
+      width:100%;
+      border-radius:14px;
+    }
+
+    .share-row {
+      gap:6px;
+    }
+
+    .share-row input {
+      font-size:0.95rem;
+      padding:9px 12px;
+    }
+
+    .shared-lobby {
+      width:100%;
+      padding:12px;
+      border-radius:14px;
+    }
+
+    body.mobile-word-list-open .sidebar {
+      position: static;
+    }
+
+    body.mobile-word-list-open .player-word-list {
+      max-height: none;
+      overflow: visible;
+    }
+
+    .footer-info {
+      display: none;
+    }
+
+    body.keyboard-open .app-title {
+      margin-bottom: 2px;
+    }
+
+    body.keyboard-open .layout {
+      gap: 8px;
+    }
+
+    body.keyboard-open .controls-bar {
+      gap: 4px 6px;
+      padding: 7px 8px;
+    }
+
+    body.keyboard-open .share-panel,
+    body.keyboard-open .start-panel,
+    body.keyboard-open .shared-lobby {
+      display:none;
+    }
+
+    body.keyboard-open button,
+    body.keyboard-open .sidebar select {
+      font-size: 0.82rem;
+    }
+
+    body.keyboard-open #timer {
+      font-size: 1.35rem;
+    }
+
+    body.keyboard-open .scoring-help,
+    body.keyboard-open .footer-info,
+    body.keyboard-open .results.visible,
+    body.keyboard-open .player-score-tools,
+    body.keyboard-open .player-word-list {
+      display: none;
+    }
+
+    body.keyboard-open .player-panel {
+      padding: 8px;
+      gap: 4px;
+      border-radius: 12px;
+    }
+
+    body.keyboard-open .player-word-status {
+      min-height: 0.95em;
+      font-size: 0.7rem;
+    }
+
+    body.keyboard-open.mobile-word-list-open .player-score-tools {
+      display: flex;
+    }
+
+    body.keyboard-open.mobile-word-list-open .player-word-list {
+      display: flex;
+      max-height: none;
+      overflow: visible;
+    }
+  }
+
+  @media (max-width: 767px) and (prefers-color-scheme: dark) {
+    .footer-info {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<h1 class="app-title">Boggle Board</h1>
+
+<div class="layout">
+  <div class="sidebar">
+    <div class="player-panel">
+      <div class="player-entry">
+        <input id="playerWordInput" type="text" placeholder="wpisz słowo" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+        <button id="addWordBtn" class="secondary-btn mobile-icon-btn" data-mobile-icon="+" aria-label="Dodaj" title="Dodaj">Dodaj</button>
+      </div>
+      <div id="playerWordStatus" class="player-word-status"></div>
+      <button id="togglePlayerWordsBtn" class="secondary-btn player-word-toggle" type="button" hidden aria-expanded="false">Pokaż wpisane słowa</button>
+      <div class="player-score-tools">
+        <button id="countPointsBtn" class="mobile-icon-btn" data-mobile-icon="∑" aria-label="Policz punkty" title="Policz punkty" style="display:none">Policz punkty</button>
+        <div id="playerScoreSummary" class="player-score-summary"></div>
+      </div>
+      <div id="playerWordList" class="player-word-list"></div>
+    </div>
+  </div>
+
+  <div class="main">
+    <div class="controls-bar">
+      <div class="control-group">
+        <label for="language" class="control-label">Choose version:</label>
+        <select id="language"></select>
+      </div>
+      <div class="timer-row">
+        <div id="timer"></div>
+        <div class="timer-controls">
+          <button id="timerMinus" class="timer-btn">−</button>
+          <button id="timerPlus" class="timer-btn">+</button>
+        </div>
+      </div>
+      <div class="control-actions">
+        <button id="reshuffleBtn" class="mobile-icon-btn" data-mobile-icon="↻" aria-label="Jeszcze raz!" title="Jeszcze raz!">Jeszcze raz!</button>
+        <button id="showWordsBtn" class="mobile-icon-btn" data-mobile-icon="👁" aria-label="A pokaż!" title="A pokaż!" style="display:none">A pokaż!</button>
+      </div>
+      <div id="dictStatus"></div>
+    </div>
+
+    <section id="startPanel" class="start-panel" aria-live="polite">
+      <p class="start-panel-copy">Wybierz, czy chcesz zacząć losową grę, czy uruchomić grę z kodu.</p>
+      <div class="start-panel-actions">
+        <button id="startRandomGameBtn" type="button">Start losowej gry</button>
+        <button id="startSeededGameBtn" class="secondary-btn" type="button">Start gry z kodu</button>
+      </div>
+    </section>
+
+    <div class="share-panel">
+      <div class="share-row">
+        <button id="generateCodeBtn" class="secondary-btn" type="button">Generuj kod</button>
+        <input id="gameCodeOutput" class="share-code-output" type="text" placeholder="kod gry" readonly aria-label="Kod gry">
+        <button id="copyCodeBtn" class="secondary-btn" type="button">Kopiuj kod</button>
+        <button id="copyLinkBtn" class="secondary-btn" type="button">Kopiuj link</button>
+      </div>
+      <div class="share-row">
+        <input id="joinCodeInput" type="text" placeholder="wklej kod lub link" aria-label="Kod lub link do gry">
+        <button id="joinGameBtn" class="secondary-btn" type="button">Dołącz</button>
+      </div>
+      <div id="shareStatus" class="share-status"></div>
+    </div>
+
+    <section id="sharedLobby" class="shared-lobby" hidden aria-live="polite">
+      <h2 class="shared-lobby-title">Gra z kodu</h2>
+      <div class="shared-lobby-grid">
+        <div class="shared-lobby-item">
+          <span class="shared-lobby-label">Kod</span>
+          <span id="sharedLobbyCode" class="shared-lobby-value"></span>
+        </div>
+        <div class="shared-lobby-item">
+          <span class="shared-lobby-label">Wersja</span>
+          <span id="sharedLobbyLang" class="shared-lobby-value"></span>
+        </div>
+        <div class="shared-lobby-item">
+          <span class="shared-lobby-label">Plansza</span>
+          <span id="sharedLobbyBoard" class="shared-lobby-value"></span>
+        </div>
+        <div class="shared-lobby-item">
+          <span class="shared-lobby-label">Czas</span>
+          <span id="sharedLobbyDuration" class="shared-lobby-value"></span>
+        </div>
+      </div>
+      <div class="shared-lobby-actions">
+        <button id="startSharedGameBtn" type="button">Start</button>
+        <button id="cancelSharedLobbyBtn" class="secondary-btn" type="button">Losowa gra</button>
+      </div>
+    </section>
+
+    <div id="board"></div>
+
+    <details class="scoring-help">
+      <summary class="scoring-summary">Punktacja <span class="scoring-help-icon">?</span></summary>
+      <table class="scoring-table">
+        <tr><td>3–4 litery</td><td>1 pkt</td></tr>
+        <tr><td>5 liter</td><td>2 pkt</td></tr>
+        <tr><td>6 liter</td><td>3 pkt</td></tr>
+        <tr><td>7 liter</td><td>5 pkt</td></tr>
+        <tr><td>8+ liter</td><td>11 pkt</td></tr>
+      </table>
+    </details>
+  </div>
+
+  <div class="results" id="results">
+    <h2 id="resultsHeader">Znalezione słowa</h2>
+    <div class="results-summary" id="resultsSummary"></div>
+    <div class="results-insights" id="resultsInsights"></div>
+    <div class="word-list" id="wordList"></div>
+    <div id="resultsScrollHint" class="results-scroll-hint">Przewiń w dół ↓</div>
+  </div>
+</div>
+
+<div class="footer-info">
+  To plansza do gry <a href="https://en.wikipedia.org/wiki/Boggle">Boggle</a>.
+  Wyświetla tylko kosci — do gry potrzebujesz długopis, kartkę i znajomych. To nie jest gra online.<br>
+  Zasady: w wyznaczonym czasie zapisz jak najwięcej słów z sąsiadujących liter (poziomo, pionowo, ukośnie). Każdej kostki można użyć tylko raz w słowie. Liczą się słowa o min. 3 literach. Tylko słowa pisane z małej litery.
+</div>
+
+<script>
+const languages = {
+    pol44: [4, 4, 5.36, 'UIEWNĄICDTOŻOAEKOOIZUPŹYŃDBTTWMJENSNCAGANNERIĘAIIZECZÓIIŁOOYZSĆELAGZZKAŁŻRSYAPHDLWAMRHEMOĘĄBŚŁSF'],
+    pol55: [5, 5, 0, 'ODCNAAURSZSOKBZTAĘĘUZEYGOELSWCÓTZJTŚKAŁOZAENERIHALCŁMIMRDYŻZPTAĆĆOBIDINENPNISAINWŁUMYLAGKŁUŃBJDRIYĘZOJZINZYISNKEŻJPOOŚĄTEEMSWŹOWHAOEKWEGPFCCOEIAIĄERAI'],
+    pol66: [6, 6, 22.26, 'CŻIÓBHZIRZSACIIŁPNZWOHAŁWYEANPANAOIPGINFSBWBRLTARRMSEJYOIDZJLNATŁRZDYICŚUONGIĆACETEENĄGMNIAWEAAARAOEUDEYJŚOWAZĘMOZEERIINŹAIDSMOPISEPEZŻAJOYIŁŻĘLŚBTUDKCDMKŁĘMKEAPYNKCEĘIŁMNWÓOZJPUKYUEOOSSZKŁŃACGLISOSEĆTORIZOHZTWZĄTELĄ'],
+    pol77: [7, 7, 0, 'YBNŁYRKĘOŁASSSOEŚZĄWBĘGDŁREZDŁSMCĆCEHPOGBTPIOÓWEIEATEIRUDNOWATIIHZAWKINWCKNKMJEAUĄEIMYGNOORPIWOĘIDCDNAOOZŃNAIMMĘDSIEOEOUZERKBIHMNŻEŚIEŁKIŻWUSOHGONEOĄZKIZTFEUAŻDDZTCLLAIZCĘZIZKEAZWPANAALPRBJASCACPDYOLŁRŻAZEŁZUOPASNŹMANIAIYYJJZŚIEŁSRETRGEWCTNOSZOŚCZGNIYRÓIAYJAAYEOMNLITJŁWĄĘĆJOIYMSEAPLZRUIESTTAAS'],
+    eng44: [4, 4, 17.12, 'HCPTYNBWAHALOFRHBKNOWAQTAXFTSMEALIAERELEHEDRPGGREVNEYTRWETZOATOIFEEDOMNSEIOUEUOIATNTDSSSJHNRSMIC'],
+    eng55: [5, 5, 0, 'SOTHEEAAAMRHIEOSOJAGUSTFWEQHGAAOTITNIEYVDRIEDHASCINTDZRXTOECIEKNSOREIARIAEORENNAOWLOPKSPHNEESCPGSLVMTASLEDWRFTLOORFNMEFETTTYHTHGENUEECRELTBYAABBUDUMNH'],
+    eng66: [6, 6, 91.3, 'ECRSMIGWNEAUTSOAYTLFANMTEDDBHIMEONEOABIRENGOOFEEHLEADIVOEEOPOASKRRPTMLTRNNRNUIDRMGIESTTREAETRTHWPLINATZEEHPGTLSUICATAXTHFNAECARSECNGSIDECELVTSOBHVESIDEOWESATEALAMAEHSRNUOAROHUHHATIISNOOWJRFOETYQNDDYHENWTERFKLOUYWSETB'],
+    spa44: [4, 4, 17.66, 'ÓNSNOSEÑUKAANNEDNTCHXMQINZYFEWAAOÚUASLDURÁEÉDÍTAEIÜOTEAEOOEAOLLDERSRIOPJAVDMAPEARLUCSSRALIBCREOI'],
+    spa55: [5, 5, 0, 'MTGAOYURODÓCAECLTLROIEFCCNZNUEÉTSLDQEEAENAOJNDCEPEIYALVIEUDSTNASEMRARMOAIOLLTAPORASODEAOQOÚESANSTEAAREAINSNRMEAUODALEPÁCACNXSÍEBDKSTSSULSPEIIMEIÑNEEHI'],
+    spa66: [6, 6, 98.46, 'SKWDACTLIUOADLVDSERNAEDENEDLYERRONNAAREELOECLSSELASCILIVANIUMOAOGPBÉROINAOEINPOSHFOLRMÓEEIAARÚSORAMARTNAARAEJNBOÜQRSAHEUCPTTELÑSAARPGBDSRNJNNSYEDCETÁREUFSENECEÓAUAAEUOAÍCNDIEADAOLTEÍODTSUCQOAAEIPDOOIITOSAMSEMLUXLUQZL'],
+    spa77: [7, 7, 151.56, 'OISASTOPEZEEECPOAOONEOATAERLAEAOLLLNUNEADÑITTEDTYAUUOCIRDDEZIHNARTIAOBDDDNOSLSMÍCAMLARAGAVNOOUIROEURSRALWEQAÍRENÜTCLNAOSRELTIESNCENDDIOLCEOEMNCNRLAARDCLBRSVYAPOEOSÓESDLPÉURIQÓETAASLRSEAMETULALAEEDSIPNANEEDRRROURAÓBEEBEADAÍIRCÁMNCAXYIOENÚSFOSENVCJIJHAAAEINPUGSKBFAEOONCAISSPIENUTOSSUEMOAULHALDMA'],
+    rus55: [5, 5, 0, 'ЖАДАЧАОНБЬИГЫМЩПТЁАУАООИКЬЛВМЯПФИИПНЙЬЛОУКВЕГСРЕЛОЕГДЙЯАИИОЦТТСЛСООАЕЫЧЮИЗОЕЖЕТНЪАНЛОНСАВНСРРЛИЕБЭТШОВВРАЕАЕПМТОТОАСШБКОЕВНУРХРЛЯУРЗОКДСКРЕНХИЧНИОДЛМТ'],
+};
+const languageKeys = Object.keys(languages);
+const SHARED_CODE_VERSION = 1;
+
+// Dictionary config per language prefix
+const dictConfig = {
+    pol: { trieSrc: 'pl_dict_trie.js', globalVar: 'PL_TRIE', linkBase: 'https://sjp.pl/' },
+    eng: { trieSrc: 'en_dict_trie.js', globalVar: 'EN_TRIE', linkBase: 'https://en.wiktionary.org/wiki/' },
+    spa: { trieSrc: 'es_dict_trie.js', globalVar: 'ES_TRIE', linkBase: 'https://dle.rae.es/' },
+    rus: { trieSrc: 'ru_dict_trie.js', globalVar: 'RU_TRIE', linkBase: 'https://ru.wiktionary.org/wiki/' },
+};
+
+function getDictConfigForLang(langKey) {
+    for (const prefix in dictConfig) {
+        if (langKey.startsWith(prefix)) return dictConfig[prefix];
+    }
+    return null;
+}
+
+// --- Trie & Solver ---
+
+function findWords(board, trie, minLength) {
+    const rows = board.length;
+    const cols = board[0].length;
+    const found = new Set();
+    const cellHits = Array.from({ length: rows }, () => new Array(cols).fill(0));
+    const cellWords = Array.from({ length: rows }, () => Array.from({ length: cols }, () => new Set()));
+    const wordCells = {};
+    const visited = Array.from({ length: rows }, () => new Array(cols).fill(false));
+    const pathBuf = [];
+
+    function recordPath(word) {
+        for (const [pr, pc] of pathBuf) {
+            cellHits[pr][pc]++;
+            cellWords[pr][pc].add(word);
+        }
+        if (!wordCells[word]) wordCells[word] = [];
+        wordCells[word].push(pathBuf.map(([r, c]) => r * cols + c));
+    }
+
+    function dfs(r, c, node, word) {
+        if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+        if (visited[r][c]) return;
+
+        const ch = board[r][c];
+        const next = node[ch];
+        if (!next) return;
+
+        const nextWord = word + ch;
+        pathBuf.push([r, c]);
+
+        if (next === 1) {
+            if (nextWord.length >= minLength) {
+                found.add(nextWord);
+                recordPath(nextWord);
+            }
+            pathBuf.pop();
+            return;
+        }
+        if (next.$ && nextWord.length >= minLength) {
+            found.add(nextWord);
+            recordPath(nextWord);
+        }
+
+        visited[r][c] = true;
+        for (let dr = -1; dr <= 1; dr++) {
+            for (let dc = -1; dc <= 1; dc++) {
+                if (dr === 0 && dc === 0) continue;
+                dfs(r + dr, c + dc, next, nextWord);
+            }
+        }
+        visited[r][c] = false;
+        pathBuf.pop();
+    }
+
+    for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+            dfs(r, c, trie, '');
+        }
+    }
+    return { found, cellHits, cellWords, wordCells };
+}
+
+// --- Dictionary loading via <script> tag ---
+
+const trieCache = {};
+const trieLoadPromises = {};
+
+const dictStatusEl = document.getElementById('dictStatus');
+
+function setDictStatus(msg) {
+    dictStatusEl.textContent = msg;
+}
+
+function loadTrieViaScript(dictCfg) {
+    const key = dictCfg.globalVar;
+    if (trieCache[key]) return Promise.resolve(trieCache[key]);
+    if (trieLoadPromises[key]) return trieLoadPromises[key];
+
+    trieLoadPromises[key] = new Promise((resolve, reject) => {
+        setDictStatus('Ładowanie słownika…');
+        const script = document.createElement('script');
+        script.src = dictCfg.trieSrc;
+        script.onload = () => {
+            if (window[key]) {
+                trieCache[key] = window[key];
+                setDictStatus('Słownik gotowy ✓');
+                trieReady = true;
+                updateShowWordsBtn();
+                resolve(trieCache[key]);
+            } else {
+                setDictStatus('Błąd słownika');
+                reject(new Error(key + ' not found after script load'));
+            }
+        };
+        script.onerror = () => {
+            setDictStatus('Brak słownika');
+            delete trieLoadPromises[key];
+            reject(new Error('Failed to load ' + dictCfg.trieSrc));
+        };
+        document.head.appendChild(script);
+    });
+    return trieLoadPromises[key];
+}
+
+async function ensureTrie(dictCfg) {
+    if (!dictCfg) return null;
+    const key = dictCfg.globalVar;
+    if (trieCache[key]) {
+        trieReady = true;
+        updateShowWordsBtn();
+        return trieCache[key];
+    }
+    try {
+        return await loadTrieViaScript(dictCfg);
+    } catch (e) {
+        return null;
+    }
+}
+
+// --- UI elements ---
+
+const languageSelect = document.getElementById('language');
+for (let key in languages) {
+    const option = document.createElement('option');
+    option.value = key;
+    option.textContent = key;
+    languageSelect.appendChild(option);
+}
+
+// Apply ?lang= param
+const urlParams = new URLSearchParams(window.location.search);
+const urlLang = urlParams.get('lang');
+const sharedCodeFromUrl = urlParams.get('g');
+const parsedDuration = parseInt(urlParams.get('t'), 10);
+let gameDuration = Number.isFinite(parsedDuration) ? Math.max(30, parsedDuration) : 180;
+
+languageSelect.value = 'pol55';
+if (urlLang && languages[urlLang]) {
+    languageSelect.value = urlLang;
+}
+
+const boardEl = document.getElementById('board');
+const timerEl = document.getElementById('timer');
+const timerMinusBtn = document.getElementById('timerMinus');
+const timerPlusBtn = document.getElementById('timerPlus');
+const reshuffleBtn = document.getElementById('reshuffleBtn');
+const showWordsBtn = document.getElementById('showWordsBtn');
+const startPanelEl = document.getElementById('startPanel');
+const startRandomGameBtn = document.getElementById('startRandomGameBtn');
+const startSeededGameBtn = document.getElementById('startSeededGameBtn');
+const generateCodeBtn = document.getElementById('generateCodeBtn');
+const gameCodeOutputEl = document.getElementById('gameCodeOutput');
+const copyCodeBtn = document.getElementById('copyCodeBtn');
+const copyLinkBtn = document.getElementById('copyLinkBtn');
+const joinCodeInputEl = document.getElementById('joinCodeInput');
+const joinGameBtn = document.getElementById('joinGameBtn');
+const shareStatusEl = document.getElementById('shareStatus');
+const sharedLobbyEl = document.getElementById('sharedLobby');
+const sharedLobbyCodeEl = document.getElementById('sharedLobbyCode');
+const sharedLobbyLangEl = document.getElementById('sharedLobbyLang');
+const sharedLobbyBoardEl = document.getElementById('sharedLobbyBoard');
+const sharedLobbyDurationEl = document.getElementById('sharedLobbyDuration');
+const startSharedGameBtn = document.getElementById('startSharedGameBtn');
+const cancelSharedLobbyBtn = document.getElementById('cancelSharedLobbyBtn');
+const appTitleEl = document.querySelector('.app-title');
+const mainEl = document.querySelector('.main');
+const controlsBarEl = document.querySelector('.controls-bar');
+const sidebarEl = document.querySelector('.sidebar');
+const playerPanelEl = document.querySelector('.player-panel');
+const playerEntryEl = document.querySelector('.player-entry');
+const scoringHelpEl = document.querySelector('.scoring-help');
+const resultsEl = document.getElementById('results');
+const resultsSummaryEl = document.getElementById('resultsSummary');
+const resultsInsightsEl = document.getElementById('resultsInsights');
+const wordListEl = document.getElementById('wordList');
+const resultsScrollHintEl = document.getElementById('resultsScrollHint');
+const playerWordInputEl = document.getElementById('playerWordInput');
+const addWordBtn = document.getElementById('addWordBtn');
+const playerWordStatusEl = document.getElementById('playerWordStatus');
+const togglePlayerWordsBtn = document.getElementById('togglePlayerWordsBtn');
+const playerWordListEl = document.getElementById('playerWordList');
+const countPointsBtn = document.getElementById('countPointsBtn');
+const playerScoreSummaryEl = document.getElementById('playerScoreSummary');
+let timerInterval;
+let pendingTimeouts = [];
+let boardGeneration = 0;
+
+// Current board state (captured after dice settle)
+let currentBoard = null;
+let currentLangKey = null;
+let playerWords = [];
+let playerWordSet = new Set();
+let solverWords = null;
+let solverWordCells = {};
+let wordScoreState = {};
+let gameFinished = false;
+let mobileWordListExpanded = false;
+let mobileViewportBaseHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+let currentGameMode = 'random';
+let pendingSharedConfig = null;
+let activeSharedCode = '';
+let activeSeed = null;
+let startPanelVisible = false;
+
+function setShareStatus(msg, isError = false) {
+    shareStatusEl.textContent = msg;
+    shareStatusEl.classList.toggle('error', !!isError);
+}
+
+function syncUrlState() {
+    const url = new URL(window.location);
+    url.searchParams.set('lang', languageSelect.value);
+    url.searchParams.set('t', gameDuration);
+    if (currentGameMode === 'shared' && activeSharedCode) {
+        url.searchParams.set('g', activeSharedCode);
+    } else {
+        url.searchParams.delete('g');
+    }
+    history.replaceState(null, '', url);
+}
+
+function updateMainControlsDisabled(disabled) {
+    languageSelect.disabled = disabled;
+    timerMinusBtn.disabled = disabled;
+    timerPlusBtn.disabled = disabled;
+    reshuffleBtn.disabled = disabled;
+}
+
+function setStartPanelVisible(visible) {
+    startPanelVisible = !!visible;
+    startPanelEl.hidden = !startPanelVisible;
+    if (startPanelVisible) {
+        boardEl.classList.add('board-hidden');
+        timerEl.textContent = formatTime(gameDuration);
+    }
+    updateResponsiveLayout();
+}
+
+function updateSharedLobby() {
+    const hasPendingSharedGame = !!pendingSharedConfig;
+    sharedLobbyEl.hidden = !hasPendingSharedGame;
+    boardEl.classList.toggle('board-hidden', hasPendingSharedGame || startPanelVisible);
+    updateMainControlsDisabled(hasPendingSharedGame);
+
+    if (!hasPendingSharedGame) {
+        updateResponsiveLayout();
+        return;
+    }
+
+    sharedLobbyCodeEl.textContent = activeSharedCode || '—';
+    sharedLobbyLangEl.textContent = pendingSharedConfig.lang;
+    sharedLobbyBoardEl.textContent = getBoardLabel(pendingSharedConfig.lang);
+    sharedLobbyDurationEl.textContent = formatTime(pendingSharedConfig.t);
+    timerEl.textContent = formatTime(pendingSharedConfig.t);
+    updateResponsiveLayout();
+}
+
+function cancelActiveBoard() {
+    clearInterval(timerInterval);
+    pendingTimeouts.forEach(id => clearTimeout(id));
+    pendingTimeouts = [];
+    boardGeneration += 1;
+}
+
+function prepareRoundReset() {
+    cancelActiveBoard();
+    boardEl.classList.remove('board-hidden');
+    boardEl.innerHTML = '';
+    hideResults();
+    resetPlayerGameState();
+    currentBoard = null;
+    trieReady = false;
+    showWordsBtn.style.display = 'none';
+    setDictStatus('');
+}
+
+function leaveSharedMode() {
+    currentGameMode = 'random';
+    pendingSharedConfig = null;
+    activeSharedCode = '';
+    updateSharedLobby();
+    syncUrlState();
+}
+
+function showStartScreen(message = '', isError = false) {
+    leaveSharedMode();
+    activeSeed = null;
+    currentBoard = null;
+    currentLangKey = languageSelect.value;
+    prepareRoundReset();
+    setPlayerInputEnabled(false, 'wybierz start');
+    setPlayerWordStatus('');
+    setStartPanelVisible(true);
+    syncUrlState();
+    setShareStatus(message, isError);
+}
+
+function openSharedLobby(config, code, message = 'Kod gotowy. Kliknij Start, aby zacząć.') {
+    setStartPanelVisible(false);
+    currentGameMode = 'shared';
+    pendingSharedConfig = {
+        v: config.v || SHARED_CODE_VERSION,
+        lang: config.lang,
+        t: config.t,
+        seed: normalizeSeed(config.seed),
+    };
+    activeSharedCode = code;
+    activeSeed = pendingSharedConfig.seed;
+    languageSelect.value = pendingSharedConfig.lang;
+    gameDuration = pendingSharedConfig.t;
+    fillShareCode(code, pendingSharedConfig);
+    prepareRoundReset();
+    currentLangKey = pendingSharedConfig.lang;
+    setPlayerInputEnabled(false, 'kliknij Start');
+    setPlayerWordStatus('Gra z kodu czeka na start.');
+    updateSharedLobby();
+    syncUrlState();
+    setShareStatus(message);
+    const dictCfg = getDictConfigForLang(pendingSharedConfig.lang);
+    if (dictCfg) ensureTrie(dictCfg);
+}
+
+function generateShareCodeFromCurrentGame() {
+    const config = {
+        v: SHARED_CODE_VERSION,
+        lang: languageSelect.value,
+        t: gameDuration,
+        seed: generateRandomSeed(),
+    };
+    const code = encodeGameCode(config);
+    if (!code) {
+        setShareStatus('Nie udało się wygenerować kodu gry.', true);
+        return;
+    }
+    openSharedLobby(config, code, 'Nowa gra z kodu jest gotowa. Kliknij Start, aby zacząć.');
+}
+
+async function copyTextToClipboard(text) {
+    if (!text) return false;
+    if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+    }
+
+    const tempInput = document.createElement('input');
+    tempInput.value = text;
+    document.body.appendChild(tempInput);
+    tempInput.select();
+    const copied = document.execCommand('copy');
+    tempInput.remove();
+    return copied;
+}
+
+function joinSharedGameFromInput() {
+    const rawCode = extractSharedCode(joinCodeInputEl.value);
+    if (!rawCode) {
+        setShareStatus('Wklej kod lub link do gry.', true);
+        return;
+    }
+
+    try {
+        const config = decodeGameCode(rawCode);
+        openSharedLobby(config, rawCode, 'Kod odczytany. Start uruchomi tę samą planszę.');
+    } catch (error) {
+        setShareStatus(error.message || 'Nie udało się odczytać kodu gry.', true);
+    }
+}
+
+function shuffle(array) {
+    return shuffleWithRandom(array, Math.random);
+}
+
+function shuffleWithRandom(array, rng) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+    return array;
+}
+
+function getRandomLetter(die, rng = Math.random) {
+    return die[Math.floor(rng() * die.length)];
+}
+
+function normalizeSeed(seed) {
+    const normalized = Number(seed) >>> 0;
+    return normalized || 1;
+}
+
+function createSeededRandom(seed) {
+    let state = normalizeSeed(seed);
+    return () => {
+        state = (state + 0x6D2B79F5) >>> 0;
+        let t = state;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+}
+
+function generateRandomSeed() {
+    if (window.crypto && typeof window.crypto.getRandomValues === 'function') {
+        const values = new Uint32Array(1);
+        window.crypto.getRandomValues(values);
+        return normalizeSeed(values[0]);
+    }
+    return normalizeSeed(Math.floor(Math.random() * 0xFFFFFFFF));
+}
+
+function computeSharedChecksum(version, langIndex, duration, seed) {
+    let hash = 2166136261 >>> 0;
+    const payload = [version, langIndex, duration, seed].join(':');
+    for (const ch of payload) {
+        hash ^= ch.charCodeAt(0);
+        hash = Math.imul(hash, 16777619) >>> 0;
+    }
+    return (hash % 1296).toString(36).padStart(2, '0');
+}
+
+function encodeGameCode(config) {
+    const langIndex = languageKeys.indexOf(config.lang);
+    if (langIndex < 0) return '';
+    const version = SHARED_CODE_VERSION;
+    const duration = Math.max(30, Math.trunc(config.t));
+    const seed = normalizeSeed(config.seed);
+    const checksum = computeSharedChecksum(version, langIndex, duration, seed);
+    return [
+        version.toString(36),
+        langIndex.toString(36),
+        duration.toString(36),
+        seed.toString(36),
+        checksum,
+    ].join('-');
+}
+
+function decodeGameCode(rawCode) {
+    const normalized = String(rawCode || '').trim().toLowerCase();
+    const parts = normalized.split(/[-.]/).filter(Boolean);
+    if (parts.length !== 5) {
+        throw new Error('Nieprawidłowy format kodu.');
+    }
+
+    const [versionPart, langPart, durationPart, seedPart, checksumPart] = parts;
+    const version = parseInt(versionPart, 36);
+    const langIndex = parseInt(langPart, 36);
+    const duration = parseInt(durationPart, 36);
+    const seed = parseInt(seedPart, 36);
+
+    if (!Number.isFinite(version) || version !== SHARED_CODE_VERSION) {
+        throw new Error('Nieobsługiwana wersja kodu.');
+    }
+    if (!Number.isInteger(langIndex) || !languageKeys[langIndex]) {
+        throw new Error('Nieznana wersja planszy.');
+    }
+    if (!Number.isInteger(duration) || duration < 30) {
+        throw new Error('Nieprawidłowy czas gry.');
+    }
+    if (!Number.isInteger(seed) || seed < 0) {
+        throw new Error('Nieprawidłowe ziarno gry.');
+    }
+
+    const expectedChecksum = computeSharedChecksum(version, langIndex, duration, normalizeSeed(seed));
+    if (checksumPart !== expectedChecksum) {
+        throw new Error('Kod gry ma błędną sumę kontrolną.');
+    }
+
+    return {
+        v: version,
+        lang: languageKeys[langIndex],
+        t: duration,
+        seed: normalizeSeed(seed),
+    };
+}
+
+function extractSharedCode(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    const directMatch = raw.match(/[?&]g=([^&]+)/i);
+    if (directMatch) {
+        return decodeURIComponent(directMatch[1]).trim();
+    }
+
+    try {
+        const parsed = new URL(raw, window.location.href);
+        const code = parsed.searchParams.get('g');
+        if (code) return code.trim();
+    } catch (e) {
+        return raw;
+    }
+
+    return raw;
+}
+
+function buildSharedLink(code, config) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('lang', config.lang);
+    url.searchParams.set('t', config.t);
+    url.searchParams.set('g', code);
+    return url.toString();
+}
+
+function getBoardLabel(langKey) {
+    const langConfig = languages[langKey];
+    if (!langConfig) return '—';
+    return `${langConfig[0]}×${langConfig[1]}`;
+}
+
+function generateBoardPlan(langKey, seed) {
+    const [rows, cols, , diceString] = languages[langKey];
+    const dice = [];
+    for (let i = 0; i < diceString.length; i += 6) {
+        dice.push(diceString.slice(i, i + 6));
+    }
+
+    const rng = createSeededRandom(seed);
+    const shuffledDice = shuffleWithRandom([...dice], rng);
+    const flatLetters = shuffledDice.map(die => getRandomLetter(die, rng).toUpperCase());
+    const boardMatrix = Array.from({ length: rows }, (_, r) =>
+        Array.from({ length: cols }, (_, c) => flatLetters[r * cols + c])
+    );
+
+    return { rows, cols, flatLetters, boardMatrix };
+}
+
+function formatTime(seconds) {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+}
+
+function normalizePlayerWord(value) {
+    return value.trim().toLocaleLowerCase();
+}
+
+function getWordKey(word) {
+    return word.toLocaleUpperCase();
+}
+
+function scoreWord(word) {
+    const len = word.length;
+    if (len < 3) return 0;
+    if (len <= 4) return 1;
+    if (len === 5) return 2;
+    if (len === 6) return 3;
+    if (len === 7) return 5;
+    return 11;
+}
+
+function setPlayerWordStatus(msg) {
+    playerWordStatusEl.textContent = msg;
+}
+
+function setPlayerInputEnabled(enabled, disabledPlaceholder = 'koniec gry') {
+    playerWordInputEl.disabled = !enabled;
+    addWordBtn.disabled = !enabled;
+    playerWordInputEl.placeholder = enabled ? 'wpisz słowo' : disabledPlaceholder;
+    if (!enabled && document.activeElement === playerWordInputEl) {
+        playerWordInputEl.blur();
+    }
+}
+
+function isMobileViewport() {
+    return window.matchMedia('(max-width: 767px)').matches;
+}
+
+function getVisibleViewportHeight() {
+    return window.visualViewport ? window.visualViewport.height : window.innerHeight;
+}
+
+function getKeyboardInset() {
+    if (!window.visualViewport) return 0;
+    return Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+}
+
+function updateBoardSize() {
+    const langKey = currentLangKey || languageSelect.value;
+    const langConfig = languages[langKey];
+    if (!langConfig) return;
+
+    const [rows, cols] = langConfig;
+    const desktopCell = 60;
+    const desktopGap = 12;
+
+    if (!isMobileViewport()) {
+        document.documentElement.style.setProperty('--board-cell-size', `${desktopCell}px`);
+        document.documentElement.style.setProperty('--board-gap', `${desktopGap}px`);
+        boardEl.style.gridTemplateColumns = `repeat(${cols}, var(--board-cell-size))`;
+        boardEl.style.gridTemplateRows = `repeat(${rows}, var(--board-cell-size))`;
+        return;
+    }
+
+    const keyboardOpen = document.body.classList.contains('keyboard-open');
+    const baseGap = rows >= 7 ? 4 : rows >= 6 ? 6 : 8;
+    const gap = keyboardOpen ? Math.max(4, baseGap - 2) : baseGap;
+    const viewportHeight = getVisibleViewportHeight();
+    const availableWidth = Math.max(220, Math.min(mainEl.clientWidth || window.innerWidth, window.innerWidth) - 24);
+    const titleHeight = appTitleEl ? appTitleEl.getBoundingClientRect().height : 0;
+    const controlsHeight = controlsBarEl ? controlsBarEl.getBoundingClientRect().height : 0;
+    const composerHeight = (playerEntryEl ? playerEntryEl.getBoundingClientRect().height : 0) + (playerWordStatusEl ? playerWordStatusEl.getBoundingClientRect().height : 0);
+    const scoringHeight = keyboardOpen ? 0 : Math.min(scoringHelpEl ? scoringHelpEl.getBoundingClientRect().height : 0, 48);
+    const layoutAllowance = keyboardOpen ? 28 : 44;
+    const availableHeight = Math.max(150, viewportHeight - titleHeight - controlsHeight - composerHeight - scoringHeight - layoutAllowance);
+    const cellByWidth = Math.floor((availableWidth - gap * (cols - 1)) / cols);
+    const cellByHeight = Math.floor((availableHeight - gap * (rows - 1)) / rows);
+    const minSize = rows >= 7 ? 28 : rows >= 6 ? 32 : 36;
+    const maxSize = rows <= 4 ? 68 : 60;
+    const cellSize = Math.max(minSize, Math.min(maxSize, cellByWidth, cellByHeight));
+
+    document.documentElement.style.setProperty('--board-cell-size', `${cellSize}px`);
+    document.documentElement.style.setProperty('--board-gap', `${gap}px`);
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, var(--board-cell-size))`;
+    boardEl.style.gridTemplateRows = `repeat(${rows}, var(--board-cell-size))`;
+}
+
+function updateResponsiveLayout() {
+    const viewportHeight = getVisibleViewportHeight();
+    const inputFocused = document.activeElement === playerWordInputEl;
+
+    if (!inputFocused) {
+        mobileViewportBaseHeight = viewportHeight;
+    } else {
+        mobileViewportBaseHeight = Math.max(mobileViewportBaseHeight, viewportHeight);
+    }
+
+    const keyboardOpen = isMobileViewport() && inputFocused && viewportHeight < mobileViewportBaseHeight - 120;
+    document.body.classList.toggle('keyboard-open', keyboardOpen);
+    document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
+    document.documentElement.style.setProperty('--composer-safe-bottom', `${Math.max(0, Math.round(getKeyboardInset()))}px`);
+    updatePlayerWordsToggle();
+
+    if (sidebarEl && playerPanelEl) {
+        sidebarEl.style.alignSelf = isMobileViewport() ? 'stretch' : '';
+    }
+
+    updateBoardSize();
+}
+
+function clearScoreSummary() {
+    playerScoreSummaryEl.textContent = '';
+}
+
+function updatePlayerWordsToggle() {
+    const shouldShow = isMobileViewport() && playerWords.length > 0;
+    if (!shouldShow && mobileWordListExpanded) {
+        mobileWordListExpanded = false;
+        document.body.classList.remove('mobile-word-list-open');
+    }
+    togglePlayerWordsBtn.hidden = !shouldShow;
+    togglePlayerWordsBtn.textContent = mobileWordListExpanded ? 'Ukryj wpisane słowa' : 'Pokaż wpisane słowa';
+    togglePlayerWordsBtn.setAttribute('aria-expanded', shouldShow && mobileWordListExpanded ? 'true' : 'false');
+}
+
+function setMobileWordListExpanded(expanded, options = {}) {
+    const { scrollIntoView = false } = options;
+    mobileWordListExpanded = !!expanded && isMobileViewport() && playerWords.length > 0;
+    document.body.classList.toggle('mobile-word-list-open', mobileWordListExpanded);
+    updatePlayerWordsToggle();
+    updateResponsiveLayout();
+    if (mobileWordListExpanded && scrollIntoView) {
+        requestAnimationFrame(() => {
+            playerWordListEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+    }
+}
+
+function updateResultsScrollHint() {
+    const canScroll = wordListEl.scrollHeight > wordListEl.clientHeight + 8;
+    const atBottom = wordListEl.scrollTop + wordListEl.clientHeight >= wordListEl.scrollHeight - 8;
+    resultsScrollHintEl.classList.toggle('visible', canScroll && !atBottom);
+}
+
+function computePlayerScore() {
+    let total = 0;
+    for (const word of playerWords) {
+        const state = wordScoreState[getWordKey(word)];
+        total += state ? state.points || 0 : 0;
+    }
+    return total;
+}
+
+function renderPlayerWords() {
+    playerWordListEl.innerHTML = '';
+    playerPanelEl.classList.toggle('is-empty', !playerWords.length);
+
+    if (!playerWords.length) {
+        const emptyEl = document.createElement('div');
+        emptyEl.className = 'player-word-empty';
+        emptyEl.textContent = 'Brak wpisanych słów.';
+        playerWordListEl.appendChild(emptyEl);
+        updatePlayerWordsToggle();
+        return;
+    }
+
+    const dictCfg = getDictConfigForLang(currentLangKey || '');
+    for (const word of playerWords) {
+        const key = getWordKey(word);
+        const row = document.createElement('div');
+        row.className = 'player-word-row';
+
+        let wordEl;
+        if (gameFinished && dictCfg && dictCfg.linkBase) {
+            wordEl = document.createElement('a');
+            wordEl.href = dictCfg.linkBase + encodeURIComponent(word);
+            wordEl.target = '_blank';
+            wordEl.rel = 'noopener';
+            wordEl.className = 'player-word-link';
+            wordEl.dataset.word = key;
+        } else {
+            wordEl = document.createElement('span');
+            wordEl.className = 'player-word-text';
+        }
+        wordEl.textContent = word;
+        row.appendChild(wordEl);
+
+        if (gameFinished) {
+            const valid = !!(solverWords && solverWords.has(key));
+            const state = wordScoreState[key] || (wordScoreState[key] = { unique: true, valid: false, points: 0 });
+            state.valid = valid;
+            if (!valid) state.unique = false;
+            state.points = valid && state.unique ? scoreWord(word) : 0;
+            wordEl.classList.toggle('non-unique', !state.unique);
+
+            let issueEl = null;
+            if (!valid) {
+                issueEl = document.createElement('span');
+                issueEl.className = 'player-word-issue';
+                issueEl.textContent = '❌';
+                issueEl.title = 'Słowo nie występuje na planszy';
+                issueEl.setAttribute('aria-label', 'Słowo nie występuje na planszy');
+                row.appendChild(issueEl);
+            }
+
+            const pointsEl = document.createElement('span');
+            pointsEl.className = 'player-word-points';
+            pointsEl.textContent = `${state.points} pkt`;
+            row.appendChild(pointsEl);
+
+            const controls = document.createElement('label');
+            controls.className = 'player-word-controls';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.checked = !!state.unique;
+            checkbox.disabled = !valid;
+            checkbox.addEventListener('change', () => {
+                state.unique = checkbox.checked;
+                state.points = state.valid && state.unique ? scoreWord(word) : 0;
+                wordEl.classList.toggle('non-unique', !state.unique);
+                pointsEl.textContent = `${state.points} pkt`;
+                clearScoreSummary();
+            });
+            controls.appendChild(checkbox);
+            controls.append(document.createTextNode('unikat'));
+            row.appendChild(controls);
+        }
+
+        playerWordListEl.appendChild(row);
+    }
+
+    updatePlayerWordsToggle();
+}
+
+function resetPlayerGameState() {
+    setMobileWordListExpanded(false);
+    playerWords = [];
+    playerWordSet = new Set();
+    solverWords = null;
+    solverWordCells = {};
+    wordScoreState = {};
+    gameFinished = false;
+    playerWordInputEl.value = '';
+    setPlayerWordStatus('');
+    clearScoreSummary();
+    countPointsBtn.style.display = 'none';
+    setPlayerInputEnabled(true);
+    renderPlayerWords();
+    updateResponsiveLayout();
+}
+
+function addPlayerWord() {
+    if (gameFinished) return;
+
+    const word = normalizePlayerWord(playerWordInputEl.value);
+    if (!word) {
+        setPlayerWordStatus('');
+        return;
+    }
+
+    const key = getWordKey(word);
+    if (playerWordSet.has(key)) {
+        setPlayerWordStatus('To słowo już jest na liście.');
+        playerWordInputEl.value = '';
+        return;
+    }
+
+    playerWords.unshift(word);
+    playerWordSet.add(key);
+    wordScoreState[key] = { unique: true, valid: false, points: 0 };
+    playerWordInputEl.value = '';
+    setPlayerWordStatus(`Dodano: ${word}`);
+    renderPlayerWords();
+}
+
+// Track when trie is ready for current language
+let trieReady = false;
+
+function updateShowWordsBtn() {
+    const dictCfg = getDictConfigForLang(currentLangKey || '');
+    showWordsBtn.style.display = (trieReady && dictCfg && currentBoard) ? '' : 'none';
+}
+
+function hideResults() {
+    resultsEl.classList.remove('visible');
+    wordListEl.innerHTML = '';
+    resultsSummaryEl.textContent = '';
+    resultsInsightsEl.innerHTML = '';
+    resultsScrollHintEl.classList.remove('visible');
+    updateResponsiveLayout();
+}
+
+const resultsHeaders = {
+    pol: 'Znalezione słowa', eng: 'Words found',
+    spa: 'Palabras encontradas', rus: 'Найденные слова',
+};
+const resultsSummaryLabels = {
+    pol: n => `${n} słów`, eng: n => `${n} words`,
+    spa: n => `${n} palabras`, rus: n => `${n} слов`,
+};
+const resultsInsightLabels = {
+    pol: {
+        starts: 'Najczęściej na',
+        longest: 'Najdłuższe',
+        average: 'Średnia długość',
+        letters: n => `${n} liter`,
+    },
+    eng: {
+        starts: 'Most start with',
+        longest: 'Longest',
+        average: 'Average length',
+        letters: n => `${n} letters`,
+    },
+    spa: {
+        starts: 'Najwięcej na',
+        longest: 'Najdłuższe',
+        average: 'Średnia długość',
+        letters: n => `${n} letras`,
+    },
+    rus: {
+        starts: 'Чаще всего на',
+        longest: 'Самое длинное',
+        average: 'Средняя длина',
+        letters: n => `${n} букв`,
+    },
+};
+const letterLabels = {
+    pol: n => `${n} liter`, eng: n => `${n} letters`,
+    spa: n => `${n} letras`, rus: n => `${n} букв`,
+};
+
+function getLangPrefix(langKey) {
+    for (const prefix in dictConfig) {
+        if (langKey.startsWith(prefix)) return prefix;
+    }
+    return 'eng';
+}
+
+function renderResultsInsights(words, prefix) {
+    resultsInsightsEl.innerHTML = '';
+    if (!words.length) return;
+
+    const labels = resultsInsightLabels[prefix] || resultsInsightLabels.eng;
+    const startCounts = new Map();
+    let totalLen = 0;
+    let maxLen = 0;
+
+    for (const word of words) {
+        totalLen += word.length;
+        maxLen = Math.max(maxLen, word.length);
+        const first = word[0];
+        startCounts.set(first, (startCounts.get(first) || 0) + 1);
+    }
+
+    const topStart = Array.from(startCounts.entries())
+        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0];
+    const insights = [
+        [labels.starts, `${topStart[0].toLowerCase()} (${topStart[1]})`],
+        [labels.longest, labels.letters(maxLen)],
+        [labels.average, (totalLen / words.length).toFixed(1)],
+    ];
+
+    for (const [label, value] of insights) {
+        const row = document.createElement('div');
+        row.className = 'results-insight';
+
+        const labelEl = document.createElement('span');
+        labelEl.className = 'results-insight-label';
+        labelEl.textContent = label;
+
+        const valueEl = document.createElement('span');
+        valueEl.className = 'results-insight-value';
+        valueEl.textContent = value;
+
+        row.appendChild(labelEl);
+        row.appendChild(valueEl);
+        resultsInsightsEl.appendChild(row);
+    }
+}
+
+function showResults(words, dictCfg) {
+    words.sort((a, b) => b.length - a.length || a.localeCompare(b));
+
+    const prefix = getLangPrefix(currentLangKey);
+    document.getElementById('resultsHeader').textContent = resultsHeaders[prefix] || resultsHeaders.eng;
+    resultsSummaryEl.textContent = (resultsSummaryLabels[prefix] || resultsSummaryLabels.eng)(words.length);
+    renderResultsInsights(words, prefix);
+    wordListEl.innerHTML = '';
+
+    let lastLen = -1;
+    for (const w of words) {
+        if (w.length !== lastLen) {
+            lastLen = w.length;
+            const label = document.createElement('div');
+            label.className = 'word-group-label';
+            label.textContent = (letterLabels[prefix] || letterLabels.eng)(lastLen);
+            wordListEl.appendChild(label);
+        }
+        const a = document.createElement('a');
+        a.textContent = w.toLowerCase();
+        a.dataset.word = w;
+        if (dictCfg && dictCfg.linkBase) {
+            a.href = dictCfg.linkBase + encodeURIComponent(w.toLowerCase());
+            a.target = '_blank';
+            a.rel = 'noopener';
+        }
+        wordListEl.appendChild(a);
+    }
+
+    resultsEl.classList.add('visible');
+    requestAnimationFrame(updateResultsScrollHint);
+    updateResponsiveLayout();
+}
+
+function applyHeatmap(cellHits) {
+    const rows = cellHits.length;
+    const cols = cellHits[0].length;
+    const diceEls = boardEl.querySelectorAll('.dice');
+    let maxHits = 0;
+    for (let r = 0; r < rows; r++)
+        for (let c = 0; c < cols; c++)
+            if (cellHits[r][c] > maxHits) maxHits = cellHits[r][c];
+
+    if (maxHits === 0) return;
+
+    diceEls.forEach((el, i) => {
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        const ratio = cellHits[r][c] / maxHits;
+        // Interpolate: grey (#888) → orange (#ff9800) → red (#f44336)
+        let cr, cg, cb;
+        if (ratio <= 0.5) {
+            const t = ratio * 2;
+            cr = Math.round(0x88 + (0xff - 0x88) * t);
+            cg = Math.round(0x88 + (0x98 - 0x88) * t);
+            cb = Math.round(0x88 + (0x00 - 0x88) * t);
+        } else {
+            const t = (ratio - 0.5) * 2;
+            cr = Math.round(0xff + (0xf4 - 0xff) * t);
+            cg = Math.round(0x98 + (0x43 - 0x98) * t);
+            cb = Math.round(0x00 + (0x36 - 0x00) * t);
+        }
+        el.style.color = `rgb(${cr},${cg},${cb})`;
+        el.classList.remove('finished');
+    });
+}
+
+function setupDiceHover(cellWords) {
+    const cols = cellWords[0].length;
+    const diceEls = boardEl.querySelectorAll('.dice');
+    const wordLinks = wordListEl.querySelectorAll('a[data-word]');
+    const wordLinkMap = {};
+    wordLinks.forEach(a => { wordLinkMap[a.dataset.word] = a; });
+
+    diceEls.forEach((el, i) => {
+        const r = Math.floor(i / cols);
+        const c = i % cols;
+        const words = cellWords[r][c];
+
+        el.addEventListener('mouseenter', () => {
+            for (const w of words) {
+                if (wordLinkMap[w]) wordLinkMap[w].classList.add('highlight');
+            }
+        });
+        el.addEventListener('mouseleave', () => {
+            for (const w of words) {
+                if (wordLinkMap[w]) wordLinkMap[w].classList.remove('highlight');
+            }
+        });
+    });
+}
+
+function setupWordHover(wordCells) {
+    const diceEls = boardEl.querySelectorAll('.dice');
+    const wordLinks = wordListEl.querySelectorAll('a[data-word]');
+
+    wordLinks.forEach(a => {
+        const paths = wordCells[a.dataset.word];
+        if (!paths || paths.length === 0) return;
+
+        const cellIndices = new Set();
+        for (const p of paths) for (const idx of p) cellIndices.add(idx);
+
+        a.addEventListener('mouseenter', () => {
+            for (const idx of cellIndices) diceEls[idx].classList.add('word-hover');
+        });
+        a.addEventListener('mouseleave', () => {
+            for (const idx of cellIndices) diceEls[idx].classList.remove('word-hover');
+        });
+    });
+}
+
+function setupPlayerWordHover(wordCells) {
+    const diceEls = boardEl.querySelectorAll('.dice');
+    const playerWordLinks = playerWordListEl.querySelectorAll('[data-word]');
+
+    playerWordLinks.forEach(el => {
+        const paths = wordCells[el.dataset.word];
+        if (!paths || paths.length === 0) return;
+
+        const cellIndices = new Set();
+        for (const p of paths) for (const idx of p) cellIndices.add(idx);
+
+        el.addEventListener('mouseenter', () => {
+            for (const idx of cellIndices) diceEls[idx].classList.add('word-hover');
+        });
+        el.addEventListener('mouseleave', () => {
+            for (const idx of cellIndices) diceEls[idx].classList.remove('word-hover');
+        });
+    });
+}
+
+async function onTimerEnd() {
+    if (!currentBoard) return;
+
+    const dictCfg = getDictConfigForLang(currentLangKey);
+    if (!dictCfg) return;
+
+    const trie = await ensureTrie(dictCfg);
+    if (!trie) return;
+
+    const { found, cellHits, cellWords, wordCells } = findWords(currentBoard, trie, 3);
+    solverWords = found;
+    solverWordCells = wordCells;
+    gameFinished = true;
+    setPlayerWordStatus('');
+    setPlayerInputEnabled(false);
+    countPointsBtn.style.display = '';
+    clearScoreSummary();
+    showResults(Array.from(found), dictCfg);
+    renderPlayerWords();
+    applyHeatmap(cellHits);
+    setupDiceHover(cellWords);
+    setupWordHover(wordCells);
+    setupPlayerWordHover(solverWordCells);
+}
+
+function createBoard(langKey) {
+    prepareRoundReset();
+    const gen = boardGeneration;
+    timerEl.textContent = formatTime(gameDuration);
+    currentLangKey = langKey;
+    activeSeed = normalizeSeed(activeSeed || generateRandomSeed());
+    updateResponsiveLayout();
+
+    const { rows, cols, flatLetters, boardMatrix } = generateBoardPlan(langKey, activeSeed);
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, var(--board-cell-size))`;
+    boardEl.style.gridTemplateRows = `repeat(${rows}, var(--board-cell-size))`;
+
+    // Start preloading dictionary immediately
+    const dictCfg = getDictConfigForLang(langKey);
+    if (dictCfg) ensureTrie(dictCfg);
+    let maxDelay = 0;
+
+    flatLetters.forEach((letter, index) => {
+        const diceEl = document.createElement('div');
+        diceEl.className = 'dice rolling';
+        boardEl.appendChild(diceEl);
+
+        const delay = 500 + index * 100;
+        maxDelay = Math.max(maxDelay, delay);
+
+        pendingTimeouts.push(setTimeout(() => {
+            if (gen !== boardGeneration) return;
+            diceEl.classList.remove('rolling');
+            diceEl.textContent = letter;
+        }, delay));
+    });
+
+    // Start timer after last die settled
+    pendingTimeouts.push(setTimeout(() => {
+        if (gen !== boardGeneration) return;
+        // Board is now fully settled — capture it
+        currentBoard = boardMatrix.map(row => [...row]);
+        updateShowWordsBtn();
+        updateResponsiveLayout();
+
+        let timeLeft = gameDuration;
+        timerEl.textContent = formatTime(timeLeft);
+        timerInterval = setInterval(() => {
+            if (gen !== boardGeneration) { clearInterval(timerInterval); return; }
+            timeLeft--;
+            timerEl.textContent = formatTime(timeLeft);
+            if (timeLeft === 15) {
+                boardEl.querySelectorAll('.dice').forEach(d => d.classList.add('urgent'));
+            }
+            if (timeLeft <= 0) {
+                clearInterval(timerInterval);
+                timerEl.textContent = "00:00";
+                boardEl.querySelectorAll('.dice').forEach(d => {
+                    d.classList.remove('urgent');
+                    d.classList.add('finished');
+                });
+                onTimerEnd();
+            }
+        }, 1000);
+    }, maxDelay + 200));
+}
+
+function startRandomGame(langKey = languageSelect.value) {
+    if (currentGameMode === 'shared') {
+        leaveSharedMode();
+    }
+    setStartPanelVisible(false);
+    activeSeed = generateRandomSeed();
+    createBoard(langKey);
+    syncUrlState();
+}
+
+function startSharedGame() {
+    if (!pendingSharedConfig) return;
+    const config = pendingSharedConfig;
+    pendingSharedConfig = null;
+    currentGameMode = 'shared';
+    setStartPanelVisible(false);
+    activeSeed = normalizeSeed(config.seed);
+    languageSelect.value = config.lang;
+    gameDuration = config.t;
+    updateSharedLobby();
+    createBoard(config.lang);
+    syncUrlState();
+    setShareStatus('Wspólna gra wystartowała z tego kodu.');
+}
+
+if (sharedCodeFromUrl) {
+    try {
+        const sharedConfig = decodeGameCode(sharedCodeFromUrl);
+        openSharedLobby(sharedConfig, sharedCodeFromUrl, 'Link otwarty. Kliknij Start, aby zacząć.');
+    } catch (error) {
+        showStartScreen(error.message || 'Nie udało się odczytać kodu gry z linku.', true);
+    }
+} else {
+    showStartScreen();
+}
+
+// Change board on selection and update URL
+languageSelect.addEventListener('change', e => {
+    const lang = e.target.value;
+    if (startPanelVisible) {
+        currentLangKey = lang;
+        timerEl.textContent = formatTime(gameDuration);
+        syncUrlState();
+        return;
+    }
+    startRandomGame(lang);
+});
+
+// Reshuffle button
+reshuffleBtn.addEventListener('click', () => {
+    startRandomGame(languageSelect.value);
+});
+
+// Timer +/- buttons
+timerMinusBtn.addEventListener('click', () => {
+    gameDuration = Math.max(30, gameDuration - 60);
+    if (startPanelVisible) {
+        timerEl.textContent = formatTime(gameDuration);
+        syncUrlState();
+        return;
+    }
+    startRandomGame(languageSelect.value);
+});
+
+timerPlusBtn.addEventListener('click', () => {
+    gameDuration += gameDuration < 60 ? 30 : 60;
+    if (startPanelVisible) {
+        timerEl.textContent = formatTime(gameDuration);
+        syncUrlState();
+        return;
+    }
+    startRandomGame(languageSelect.value);
+});
+
+// Show words immediately
+showWordsBtn.addEventListener('click', () => {
+    clearInterval(timerInterval);
+    timerEl.textContent = '00:00';
+    onTimerEnd();
+});
+
+wordListEl.addEventListener('scroll', updateResultsScrollHint);
+window.addEventListener('resize', () => {
+    updateResultsScrollHint();
+    updateResponsiveLayout();
+});
+
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateResponsiveLayout);
+    window.visualViewport.addEventListener('scroll', updateResponsiveLayout);
+}
+
+startRandomGameBtn.addEventListener('click', () => {
+    startRandomGame(languageSelect.value);
+});
+
+startSeededGameBtn.addEventListener('click', () => {
+    generateShareCodeFromCurrentGame();
+});
+
+addWordBtn.addEventListener('click', addPlayerWord);
+
+generateCodeBtn.addEventListener('click', generateShareCodeFromCurrentGame);
+
+copyCodeBtn.addEventListener('click', async () => {
+    const code = gameCodeOutputEl.value.trim();
+    if (!code) {
+        setShareStatus('Najpierw wygeneruj kod gry.', true);
+        return;
+    }
+    try {
+        await copyTextToClipboard(code);
+        setShareStatus('Kod gry skopiowany.');
+    } catch (error) {
+        setShareStatus('Nie udało się skopiować kodu.', true);
+    }
+});
+
+copyLinkBtn.addEventListener('click', async () => {
+    const code = gameCodeOutputEl.value.trim();
+    if (!code) {
+        setShareStatus('Najpierw wygeneruj kod gry.', true);
+        return;
+    }
+    try {
+        const config = decodeGameCode(code);
+        await copyTextToClipboard(buildSharedLink(code, config));
+        setShareStatus('Link do gry skopiowany.');
+    } catch (error) {
+        setShareStatus('Nie udało się zbudować linku do gry.', true);
+    }
+});
+
+joinGameBtn.addEventListener('click', joinSharedGameFromInput);
+
+joinCodeInputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        joinSharedGameFromInput();
+    }
+});
+
+startSharedGameBtn.addEventListener('click', startSharedGame);
+cancelSharedLobbyBtn.addEventListener('click', () => {
+    showStartScreen('Wybierz, jak chcesz zacząć grę.');
+});
+
+togglePlayerWordsBtn.addEventListener('click', () => {
+    const nextExpanded = !mobileWordListExpanded;
+    if (document.activeElement === playerWordInputEl) {
+        playerWordInputEl.blur();
+    }
+    setMobileWordListExpanded(nextExpanded, { scrollIntoView: nextExpanded });
+});
+
+playerWordInputEl.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+        e.preventDefault();
+        addPlayerWord();
+    }
+});
+
+playerWordInputEl.addEventListener('focus', () => {
+    requestAnimationFrame(updateResponsiveLayout);
+});
+
+playerWordInputEl.addEventListener('blur', () => {
+    setTimeout(updateResponsiveLayout, 120);
+});
+
+countPointsBtn.addEventListener('click', () => {
+    const total = computePlayerScore();
+    playerScoreSummaryEl.textContent = `Suma: ${total} pkt`;
+});
+
+updateResponsiveLayout();
+</script>
+
+</body>
+</html>
