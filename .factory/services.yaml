@@ -1,0 +1,21 @@
+commands:
+  install: npm install
+  lint: npm run lint
+  typecheck: npm run typecheck
+  build: npm run build
+  test: npm run test:e2e -- --workers=2
+  preview: npm run preview -- --host 127.0.0.1 --port 8137
+
+services:
+  web:
+    start: npm run dev -- --host 127.0.0.1 --port 8136
+    stop: lsof -ti tcp:8136 | xargs kill
+    healthcheck: curl -sf http://127.0.0.1:8136
+    port: 8136
+    depends_on: []
+  preview:
+    start: npm run preview -- --host 127.0.0.1 --port 8137
+    stop: lsof -ti tcp:8137 | xargs kill
+    healthcheck: curl -sf http://127.0.0.1:8137
+    port: 8137
+    depends_on: []
