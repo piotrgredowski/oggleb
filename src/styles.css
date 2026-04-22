@@ -20,7 +20,8 @@ body {
 }
 
 button,
-select {
+select,
+input {
   font: inherit;
 }
 
@@ -184,6 +185,7 @@ h1 {
 }
 
 select,
+.field input,
 .primary-button,
 .secondary-button {
   min-height: 48px;
@@ -195,6 +197,16 @@ select {
   border: 1px solid rgba(255, 255, 255, 0.18);
   background: rgba(255, 255, 255, 0.06);
   color: inherit;
+}
+
+.field input {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.06);
+  color: inherit;
+}
+
+.field input:disabled {
+  opacity: 0.7;
 }
 
 .duration-row,
@@ -225,6 +237,110 @@ select {
 .placeholder-card {
   border-radius: 22px;
   padding: 18px;
+}
+
+.guard-banner {
+  border-radius: 18px;
+  padding: 14px 16px;
+  background: rgba(255, 204, 97, 0.12);
+  border: 1px solid rgba(255, 204, 97, 0.35);
+  color: #ffe7a7;
+  font-weight: 600;
+}
+
+.solo-prestart-meta,
+.solo-live-header,
+.solo-live-chips,
+.solo-composer {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.solo-live-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.solo-live-header {
+  justify-content: space-between;
+  align-items: start;
+}
+
+.timer-pill.urgent,
+.solo-live-shell.final-seconds .board-cell {
+  border-color: rgba(255, 120, 120, 0.55);
+}
+
+.timer-pill.urgent {
+  background: rgba(255, 108, 108, 0.18);
+  color: #ffe3e3;
+}
+
+.dictionary-ready {
+  background: rgba(123, 246, 180, 0.12);
+  border-color: rgba(123, 246, 180, 0.3);
+}
+
+.dictionary-loading {
+  background: rgba(143, 176, 255, 0.12);
+}
+
+.dictionary-error {
+  background: rgba(255, 108, 108, 0.18);
+  border-color: rgba(255, 108, 108, 0.35);
+}
+
+.urgent-copy {
+  margin: 0;
+  color: #ffb2b2;
+  font-weight: 700;
+}
+
+.solo-board {
+  display: grid;
+  gap: 10px;
+}
+
+.board-cell {
+  min-height: 72px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  border: 1px solid rgba(143, 176, 255, 0.28);
+  background: linear-gradient(180deg, rgba(117, 165, 255, 0.18), rgba(255, 255, 255, 0.04));
+}
+
+.solo-word-field {
+  flex: 1 1 240px;
+}
+
+.add-word-button {
+  min-width: 132px;
+}
+
+.mobile-words-toggle {
+  display: none;
+}
+
+.player-word-card {
+  display: grid;
+  gap: 12px;
+}
+
+.word-list-live {
+  margin: 0;
+  padding-left: 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.word-list-empty {
+  color: rgba(243, 247, 255, 0.6);
 }
 
 .bullet-list {
@@ -282,8 +398,50 @@ code {
   }
 
   select,
+  .field input,
   .primary-button,
   .secondary-button {
     width: 100%;
+  }
+
+  .solo-live-header {
+    align-items: stretch;
+  }
+
+  .solo-live-chips,
+  .solo-composer {
+    width: 100%;
+  }
+
+  .solo-board {
+    gap: 8px;
+  }
+
+  .board-cell {
+    min-height: 60px;
+    border-radius: 16px;
+  }
+
+  .solo-composer {
+    position: sticky;
+    bottom: 8px;
+    z-index: 2;
+    padding: 12px;
+    border-radius: 18px;
+    background: rgba(9, 14, 26, 0.92);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+  }
+
+  .mobile-words-toggle {
+    display: block;
+  }
+
+  .player-word-card {
+    display: none;
+  }
+
+  .player-word-card.expanded {
+    display: grid;
   }
 }
