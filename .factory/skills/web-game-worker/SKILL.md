@@ -23,8 +23,8 @@ Use this skill for any feature that implements or refines the static web app: ap
 3. If the feature will use TypeScript app code, invoke `collaborative-tdd-typescript` and write failing tests first. Keep tests focused on the contract slice completed by the feature.
 4. Implement the smallest end-to-end slice that satisfies the feature while preserving local-first constraints, URL behavior, and mode boundaries.
 5. Run the narrowest useful validation during iteration, then run the required project validators from `.factory/services.yaml` before handoff.
-6. Use `agent-browser` to manually verify the fulfilled behaviors on the real browser surface. For responsive or shared-code work, verify the relevant desktop/mobile/multi-context states explicitly.
-7. Ensure no watcher or server you started is left running. If a service manifest entry is wrong, stop and return to orchestrator instead of guessing.
+6. Use `agent-browser` to manually verify the fulfilled behaviors on the real browser surface. If `agent-browser` is blocked by a local daemon or socket issue, Playwright browser tools are an acceptable fallback; for responsive or shared-code work, verify the relevant desktop/mobile/multi-context states explicitly.
+7. Reuse the approved service on `127.0.0.1:8136` when it is already running, or stop it through the manifest before starting another copy. Ensure no watcher or server you started is left running. If a service manifest entry is wrong, stop and return to orchestrator instead of guessing.
 8. Write a thorough handoff with exact commands, browser checks, test files, and any discovered issues.
 
 ## Example Handoff

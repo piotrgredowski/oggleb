@@ -39,6 +39,7 @@ Testing surface, tooling guidance, and runtime validation notes.
 
 ### Isolation guidance
 - Prefer localhost for most validation because it avoids `file://` origin quirks during routine automation
+- If `127.0.0.1:8136` is already serving the mission app, reuse it for manual/browser validation instead of starting a second dev server on a different port
 - Use separate contexts/tabs for host phone, joined phone, and TV display checks
 - For assertions about identical round identity, capture the visible board text or shared code in each context
 
