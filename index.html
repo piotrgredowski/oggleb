@@ -5,14 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Boggle Multi-Language Board</title>
 <style>
+  :root {
+    --board-cell-size: 60px;
+    --board-gap: 12px;
+    --app-height: 100vh;
+    --composer-safe-bottom: 0px;
+  }
+
   body {
     display: flex;
     flex-direction: column;
     align-items: center;
     font-family: sans-serif;
     margin: 20px;
+    width: 100%;
+    min-height: var(--app-height);
+    box-sizing: border-box;
     transition: background 0.3s, color 0.3s;
-    background: url('bg.webp') center/cover no-repeat fixed;
+    background: #d9deea;
   }
 
   .layout {
@@ -141,18 +151,18 @@
 
   #board {
     display: grid;
-    gap: 12px;
+    gap: var(--board-gap);
     perspective: 600px;
   }
 
   .dice {
-    width: 60px;
-    height: 60px;
-    border-radius: 10px;
+    width: var(--board-cell-size);
+    height: var(--board-cell-size);
+    border-radius: calc(var(--board-cell-size) * 0.16);
     display: flex;
     justify-content: center;
     align-items: center;
-    font-size: 1.5rem;
+    font-size: calc(var(--board-cell-size) * 0.42);
     font-weight: bold;
     -webkit-text-stroke: 0.5px black;
     paint-order: stroke fill;
@@ -211,12 +221,14 @@
   .results h2 {
     margin: 0;
     font-size: 1.3rem;
+    text-align: center;
   }
 
   .results-summary {
     font-size: 0.95rem;
     opacity: 0.85;
     margin-bottom: 4px;
+    text-align: center;
   }
 
   .results-insights {
@@ -351,7 +363,7 @@
 
   /* Dark mode */
   @media (prefers-color-scheme: dark) {
-    body { background: url('bg.webp') center/cover no-repeat fixed, #121212; color: #fff; }
+    body { background: #121826; color: #fff; }
     .dice { background: #1f1f1f; color: #ffeb3b; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
     #timer { color: #ffeb3b; }
     select { background: #1f1f1f; color: #ffeb3b; }
@@ -442,11 +454,14 @@
 .player-panel { width:100%; display:flex; flex-direction:column; gap:6px; margin:2px 0 8px; }
 .player-entry { display:flex; gap:6px; width:100%; }
 .player-entry input { flex:1; min-width:0; padding:6px 9px; font-size:0.92rem; border-radius:6px; border:none; }
+.mobile-icon-btn::before { content: none; }
 .secondary-btn { padding:6px 10px; font-size:0.88rem; white-space:nowrap; }
 .player-word-status { min-height:1em; font-size:0.74rem; opacity:0.75; }
-.player-score-tools { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:2.1em; }
+.player-score-tools { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:0; }
 .player-word-list { display:flex; flex-direction:column; gap:4px; flex:1 1 auto; min-height:220px; overflow-y:auto; }
 .player-word-empty { font-size:0.82rem; opacity:0.6; }
+.player-panel.is-empty .player-score-tools { display:none; }
+.player-panel.is-empty .player-word-list { min-height:0; }
 .player-word-row { display:flex; align-items:center; gap:10px; padding:5px 8px; border-radius:8px; background:rgba(255,255,255,0.12); }
 .player-word-link, .player-word-text { flex:1 1 auto; min-width:0; font-family:monospace; font-size:0.9rem; color:inherit; text-decoration:none; }
 .player-word-link:hover { text-decoration:underline; }
@@ -461,10 +476,12 @@
   @media (max-width: 767px) {
     body {
       margin: 8px 12px 12px;
+      min-height: var(--app-height);
+      padding-bottom: calc(env(safe-area-inset-bottom) + 12px);
     }
 
     .layout {
-      gap: 12px;
+      gap: 10px;
     }
 
     .app-title {
@@ -481,7 +498,9 @@
 
     .main {
       order: 1;
-      gap: 10px;
+      width: 100%;
+      gap: 8px;
+      align-items: stretch;
     }
 
     .main > .controls-bar {
@@ -492,13 +511,20 @@
       order: 2;
     }
 
+    #board {
+      margin-inline: auto;
+    }
+
     .main > .scoring-help {
       order: 3;
     }
 
     .sidebar {
       order: 2;
-      gap: 10px;
+      gap: 8px;
+      position: sticky;
+      bottom: max(var(--composer-safe-bottom), env(safe-area-inset-bottom));
+      z-index: 5;
     }
 
     .results {
@@ -507,16 +533,46 @@
     }
 
     .controls-bar {
-      gap: 8px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto;
+      gap: 6px 8px;
       padding: 8px 10px;
       border-radius: 12px;
+      align-items: center;
     }
 
-    .control-group,
+    .control-group {
+      min-width: 0;
+    }
+
+    .control-group label {
+      display: none;
+    }
+
+    .control-group select {
+      width: 100%;
+      min-width: 0;
+    }
+
     .timer-row,
     .control-actions,
     .timer-controls {
-      gap: 6px;
+      gap: 4px;
+    }
+
+    .timer-row {
+      justify-self: center;
+    }
+
+    .control-actions {
+      justify-self: end;
+      flex-wrap: nowrap;
+    }
+
+    #dictStatus {
+      grid-column: 1 / -1;
+      text-align: center;
+      min-height: 1em;
     }
 
     .control-label,
@@ -530,6 +586,19 @@
       padding: 6px 10px;
     }
 
+    .mobile-icon-btn {
+      min-width: 40px;
+      padding: 6px 9px;
+      font-size: 0;
+      line-height: 1;
+    }
+
+    .mobile-icon-btn::before {
+      content: attr(data-mobile-icon);
+      font-size: 1rem;
+      line-height: 1;
+    }
+
     .timer-btn {
       width: 18px;
       height: 18px;
@@ -541,19 +610,91 @@
     }
 
     .player-panel {
-      gap: 4px;
-      margin-bottom: 0;
+      gap: 6px;
+      margin: 0;
+      padding: 10px;
+      border-radius: 14px;
+    }
+
+    .player-entry {
+      gap: 8px;
+    }
+
+    .player-entry input {
+      padding: 9px 12px;
+      font-size: 1rem;
+    }
+
+    .player-word-status {
+      min-height: 1.1em;
+      padding-left: 2px;
     }
 
     .player-word-list {
-      min-height: 140px;
+      min-height: 96px;
+      max-height: min(28vh, 220px);
     }
 
     .footer-info {
-      position: static;
+      position: fixed;
+      left: 0;
+      right: 0;
+      bottom: 0;
       max-width: 100%;
       font-size: 0.78rem;
-      margin-top: 8px;
+      margin: 0;
+      padding: 8px 12px calc(env(safe-area-inset-bottom) + 8px);
+      background: rgba(217,222,234,0.9);
+      backdrop-filter: blur(8px);
+      z-index: 4;
+      text-align: center;
+    }
+
+    body.keyboard-open .app-title {
+      margin-bottom: 2px;
+    }
+
+    body.keyboard-open .layout {
+      gap: 8px;
+    }
+
+    body.keyboard-open .controls-bar {
+      gap: 4px 6px;
+      padding: 7px 8px;
+    }
+
+    body.keyboard-open button,
+    body.keyboard-open .sidebar select {
+      font-size: 0.82rem;
+    }
+
+    body.keyboard-open #timer {
+      font-size: 1.35rem;
+    }
+
+    body.keyboard-open .scoring-help,
+    body.keyboard-open .footer-info,
+    body.keyboard-open .results.visible,
+    body.keyboard-open .player-score-tools,
+    body.keyboard-open .player-word-list {
+      display: none;
+    }
+
+    body.keyboard-open .player-panel {
+      padding: 8px;
+      gap: 4px;
+      border-radius: 12px;
+    }
+
+    body.keyboard-open .player-word-status {
+      min-height: 0.95em;
+      font-size: 0.7rem;
+    }
+  }
+
+  @media (max-width: 767px) and (prefers-color-scheme: dark) {
+    .footer-info {
+      background: rgba(18,24,38,0.92);
     }
   }
 </style>
@@ -567,11 +708,11 @@
     <div class="player-panel">
       <div class="player-entry">
         <input id="playerWordInput" type="text" placeholder="wpisz słowo" autocomplete="off" spellcheck="false">
-        <button id="addWordBtn" class="secondary-btn">Dodaj</button>
+        <button id="addWordBtn" class="secondary-btn mobile-icon-btn" data-mobile-icon="+" aria-label="Dodaj" title="Dodaj">Dodaj</button>
       </div>
       <div id="playerWordStatus" class="player-word-status"></div>
       <div class="player-score-tools">
-        <button id="countPointsBtn" style="display:none">Policz punkty</button>
+        <button id="countPointsBtn" class="mobile-icon-btn" data-mobile-icon="∑" aria-label="Policz punkty" title="Policz punkty" style="display:none">Policz punkty</button>
         <div id="playerScoreSummary" class="player-score-summary"></div>
       </div>
       <div id="playerWordList" class="player-word-list"></div>
@@ -592,8 +733,8 @@
         </div>
       </div>
       <div class="control-actions">
-        <button id="reshuffleBtn">Jeszcze raz!</button>
-        <button id="showWordsBtn" style="display:none">A pokaż!</button>
+        <button id="reshuffleBtn" class="mobile-icon-btn" data-mobile-icon="↻" aria-label="Jeszcze raz!" title="Jeszcze raz!">Jeszcze raz!</button>
+        <button id="showWordsBtn" class="mobile-icon-btn" data-mobile-icon="👁" aria-label="A pokaż!" title="A pokaż!" style="display:none">A pokaż!</button>
       </div>
       <div id="dictStatus"></div>
     </div>
@@ -795,6 +936,8 @@ const urlLang = urlParams.get('lang');
 const parsedDuration = parseInt(urlParams.get('t'), 10);
 let gameDuration = Number.isFinite(parsedDuration) ? Math.max(30, parsedDuration) : 180;
 
+languageSelect.value = 'pol55';
+
 function updateDurationUrl() {
     const url = new URL(window.location);
     url.searchParams.set('t', gameDuration);
@@ -811,6 +954,13 @@ const boardEl = document.getElementById('board');
 const timerEl = document.getElementById('timer');
 const reshuffleBtn = document.getElementById('reshuffleBtn');
 const showWordsBtn = document.getElementById('showWordsBtn');
+const appTitleEl = document.querySelector('.app-title');
+const mainEl = document.querySelector('.main');
+const controlsBarEl = document.querySelector('.controls-bar');
+const sidebarEl = document.querySelector('.sidebar');
+const playerPanelEl = document.querySelector('.player-panel');
+const playerEntryEl = document.querySelector('.player-entry');
+const scoringHelpEl = document.querySelector('.scoring-help');
 const resultsEl = document.getElementById('results');
 const resultsSummaryEl = document.getElementById('resultsSummary');
 const resultsInsightsEl = document.getElementById('resultsInsights');
@@ -835,6 +985,7 @@ let solverWords = null;
 let solverWordCells = {};
 let wordScoreState = {};
 let gameFinished = false;
+let mobileViewportBaseHeight = window.visualViewport ? window.visualViewport.height : window.innerHeight;
 
 function shuffle(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -880,6 +1031,84 @@ function setPlayerInputEnabled(enabled) {
     playerWordInputEl.disabled = !enabled;
     addWordBtn.disabled = !enabled;
     playerWordInputEl.placeholder = enabled ? 'wpisz słowo' : 'koniec gry';
+    if (!enabled && document.activeElement === playerWordInputEl) {
+        playerWordInputEl.blur();
+    }
+}
+
+function isMobileViewport() {
+    return window.matchMedia('(max-width: 767px)').matches;
+}
+
+function getVisibleViewportHeight() {
+    return window.visualViewport ? window.visualViewport.height : window.innerHeight;
+}
+
+function getKeyboardInset() {
+    if (!window.visualViewport) return 0;
+    return Math.max(0, window.innerHeight - window.visualViewport.height - window.visualViewport.offsetTop);
+}
+
+function updateBoardSize() {
+    const langKey = currentLangKey || languageSelect.value;
+    const langConfig = languages[langKey];
+    if (!langConfig) return;
+
+    const [rows, cols] = langConfig;
+    const desktopCell = 60;
+    const desktopGap = 12;
+
+    if (!isMobileViewport()) {
+        document.documentElement.style.setProperty('--board-cell-size', `${desktopCell}px`);
+        document.documentElement.style.setProperty('--board-gap', `${desktopGap}px`);
+        boardEl.style.gridTemplateColumns = `repeat(${cols}, var(--board-cell-size))`;
+        boardEl.style.gridTemplateRows = `repeat(${rows}, var(--board-cell-size))`;
+        return;
+    }
+
+    const keyboardOpen = document.body.classList.contains('keyboard-open');
+    const baseGap = rows >= 7 ? 4 : rows >= 6 ? 6 : 8;
+    const gap = keyboardOpen ? Math.max(4, baseGap - 2) : baseGap;
+    const viewportHeight = getVisibleViewportHeight();
+    const availableWidth = Math.max(220, Math.min(mainEl.clientWidth || window.innerWidth, window.innerWidth) - 24);
+    const titleHeight = appTitleEl ? appTitleEl.getBoundingClientRect().height : 0;
+    const controlsHeight = controlsBarEl ? controlsBarEl.getBoundingClientRect().height : 0;
+    const composerHeight = (playerEntryEl ? playerEntryEl.getBoundingClientRect().height : 0) + (playerWordStatusEl ? playerWordStatusEl.getBoundingClientRect().height : 0);
+    const scoringHeight = keyboardOpen ? 0 : Math.min(scoringHelpEl ? scoringHelpEl.getBoundingClientRect().height : 0, 48);
+    const layoutAllowance = keyboardOpen ? 28 : 44;
+    const availableHeight = Math.max(150, viewportHeight - titleHeight - controlsHeight - composerHeight - scoringHeight - layoutAllowance);
+    const cellByWidth = Math.floor((availableWidth - gap * (cols - 1)) / cols);
+    const cellByHeight = Math.floor((availableHeight - gap * (rows - 1)) / rows);
+    const minSize = rows >= 7 ? 28 : rows >= 6 ? 32 : 36;
+    const maxSize = rows <= 4 ? 68 : 60;
+    const cellSize = Math.max(minSize, Math.min(maxSize, cellByWidth, cellByHeight));
+
+    document.documentElement.style.setProperty('--board-cell-size', `${cellSize}px`);
+    document.documentElement.style.setProperty('--board-gap', `${gap}px`);
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, var(--board-cell-size))`;
+    boardEl.style.gridTemplateRows = `repeat(${rows}, var(--board-cell-size))`;
+}
+
+function updateResponsiveLayout() {
+    const viewportHeight = getVisibleViewportHeight();
+    const inputFocused = document.activeElement === playerWordInputEl;
+
+    if (!inputFocused) {
+        mobileViewportBaseHeight = viewportHeight;
+    } else {
+        mobileViewportBaseHeight = Math.max(mobileViewportBaseHeight, viewportHeight);
+    }
+
+    const keyboardOpen = isMobileViewport() && inputFocused && viewportHeight < mobileViewportBaseHeight - 120;
+    document.body.classList.toggle('keyboard-open', keyboardOpen);
+    document.documentElement.style.setProperty('--app-height', `${viewportHeight}px`);
+    document.documentElement.style.setProperty('--composer-safe-bottom', `${Math.max(0, Math.round(getKeyboardInset()))}px`);
+
+    if (sidebarEl && playerPanelEl) {
+        sidebarEl.style.alignSelf = isMobileViewport() ? 'stretch' : '';
+    }
+
+    updateBoardSize();
 }
 
 function clearScoreSummary() {
@@ -903,6 +1132,7 @@ function computePlayerScore() {
 
 function renderPlayerWords() {
     playerWordListEl.innerHTML = '';
+    playerPanelEl.classList.toggle('is-empty', !playerWords.length);
 
     if (!playerWords.length) {
         const emptyEl = document.createElement('div');
@@ -991,6 +1221,7 @@ function resetPlayerGameState() {
     countPointsBtn.style.display = 'none';
     setPlayerInputEnabled(true);
     renderPlayerWords();
+    updateResponsiveLayout();
 }
 
 function addPlayerWord() {
@@ -1031,6 +1262,7 @@ function hideResults() {
     resultsSummaryEl.textContent = '';
     resultsInsightsEl.innerHTML = '';
     resultsScrollHintEl.classList.remove('visible');
+    updateResponsiveLayout();
 }
 
 const resultsHeaders = {
@@ -1152,6 +1384,7 @@ function showResults(words, dictCfg) {
 
     resultsEl.classList.add('visible');
     requestAnimationFrame(updateResultsScrollHint);
+    updateResponsiveLayout();
 }
 
 function applyHeatmap(cellHits) {
@@ -1291,10 +1524,11 @@ function createBoard(langKey) {
     trieReady = false;
     showWordsBtn.style.display = 'none';
     setDictStatus('');
+    updateResponsiveLayout();
 
     const [rows, cols, , diceString] = languages[langKey];
-    boardEl.style.gridTemplateColumns = `repeat(${cols}, 60px)`;
-    boardEl.style.gridTemplateRows = `repeat(${rows}, 60px)`;
+    boardEl.style.gridTemplateColumns = `repeat(${cols}, var(--board-cell-size))`;
+    boardEl.style.gridTemplateRows = `repeat(${rows}, var(--board-cell-size))`;
 
     // Start preloading dictionary immediately
     const dictCfg = getDictConfigForLang(langKey);
@@ -1338,6 +1572,7 @@ function createBoard(langKey) {
         // Board is now fully settled — capture it
         currentBoard = boardMatrix;
         updateShowWordsBtn();
+        updateResponsiveLayout();
 
         let timeLeft = gameDuration;
         timerEl.textContent = formatTime(timeLeft);
@@ -1399,7 +1634,15 @@ showWordsBtn.addEventListener('click', () => {
 });
 
 wordListEl.addEventListener('scroll', updateResultsScrollHint);
-window.addEventListener('resize', updateResultsScrollHint);
+window.addEventListener('resize', () => {
+    updateResultsScrollHint();
+    updateResponsiveLayout();
+});
+
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', updateResponsiveLayout);
+    window.visualViewport.addEventListener('scroll', updateResponsiveLayout);
+}
 
 addWordBtn.addEventListener('click', addPlayerWord);
 
@@ -1410,10 +1653,20 @@ playerWordInputEl.addEventListener('keydown', e => {
     }
 });
 
+playerWordInputEl.addEventListener('focus', () => {
+    requestAnimationFrame(updateResponsiveLayout);
+});
+
+playerWordInputEl.addEventListener('blur', () => {
+    setTimeout(updateResponsiveLayout, 120);
+});
+
 countPointsBtn.addEventListener('click', () => {
     const total = computePlayerScore();
     playerScoreSummaryEl.textContent = `Suma: ${total} pkt`;
 });
+
+updateResponsiveLayout();
 </script>
 
 </body>
