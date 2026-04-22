@@ -1,0 +1,15 @@
+{
+  "featureId": "finish-solo-results-scoring-and-restart",
+  "reviewedAt": "2026-04-22T20:33:58.751239+00:00",
+  "commitId": "bbdf0d2",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "Reviewed the worker transcript, handoff, and commit bbdf0d2. The implementation covers the feature contract: timeout and manual reveal converge on the same finished solo surface, found words are sorted longest-to-shortest, player entries expose valid/invalid state with score feedback and uniqueness toggles, desktop hover inspection highlights board paths, and restart reinitializes round-local solo state.",
+    "issues": []
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Pass. The solo results slice is implemented consistently with the feature description and expected behavior, and I did not find actionable blocking or non-blocking code issues in this diff."
+}

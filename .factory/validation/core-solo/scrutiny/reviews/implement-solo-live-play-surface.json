@@ -1,0 +1,22 @@
+{
+  "featureId": "implement-solo-live-play-surface",
+  "reviewedAt": "2026-04-22T22:46:00Z",
+  "commitId": "8e7b99c6ca2f4def6b6b218f04efe8054d5b7eff",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "fail",
+  "codeReview": {
+    "summary": "The feature covers most of the intended solo live-play slice: pre-start setup is clear, the board boots into an active timed round, duplicate submissions are blocked, mobile-specific controls were added, and solver output remains hidden during live play. However, the dictionary-error path never reaches a terminal error state after reveal or timeout, so the implementation does not fully satisfy the required dictionary-readiness/error behavior.",
+    "issues": [
+      {
+        "file": "src/App.tsx",
+        "line": 258,
+        "severity": "blocking",
+        "description": "If the trie fails to load, reveal/timeout leaves the round stuck in `finishing` forever instead of surfacing a clear end-state error. `finalizeSoloRound()` treats every non-ready dictionary state as 'waiting' and moves the round to `phase: 'finishing'`, but the follow-up effect only completes when `dictionary.state === 'ready'` (lines 138-164). In the permanent `error` case, the UI never resolves results and the status text misleadingly says it is still waiting. This violates the feature's required dictionary readiness/error feedback at reveal/end-of-round (VAL-SOLO-014)."
+      }
+    ]
+  },
+  "sharedStateObservations": [],
+  "addressesFailureFrom": null,
+  "summary": "Review failed. The solo live surface is largely in place, but a dictionary-load failure can strand reveal/timeout in a non-terminal waiting state instead of showing a clear error, which is a blocking gap for this feature."
+}

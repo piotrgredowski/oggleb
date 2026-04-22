@@ -47,4 +47,5 @@ Testing surface, tooling guidance, and runtime validation notes.
 ## Known Constraints
 
 - `file://` support remains required where feasible, but browser clipboard behavior may vary by environment
+- Built-in Playwright browser navigation in this Factory environment may reject direct `file://` URLs with `Access to "file:" protocol is blocked`; when that happens, use the Playwright test runtime or a manual browser check for `file://` validation and record the tool limitation in the evidence
 - Shared-code multiplayer must not rely on backend room presence, so validators should treat any websocket/session dependency as a failure

@@ -1,0 +1,28 @@
+{
+  "featureId": "build-home-shell-and-url-backed-setup",
+  "reviewedAt": "2026-04-22T22:40:00Z",
+  "commitId": "20657af438fea03dd4bf4d7188fec684da614b61",
+  "transcriptSkeletonReviewed": true,
+  "diffReviewed": true,
+  "status": "pass",
+  "codeReview": {
+    "summary": "The feature delivers the scoped home/setup shell requirements: the three primary modes are visible, setup state is URL-backed, duration is clamped, and popstate handling restores safe pre-game state without auto-starting play. I found one non-blocking history-management issue, but no blocking correctness gaps for this slice.",
+    "issues": [
+      {
+        "file": "src/App.tsx",
+        "line": 158,
+        "severity": "non_blocking",
+        "description": "Clicking the already-selected mode card still calls `patchState({ mode }, 'push')`, which adds duplicate browser-history entries for the same URL/state. That makes Back/Forward navigation noisier than intended at the home/setup level and can require extra Back presses before the user returns to the prior distinct state. Guard against no-op pushes before calling `pushState`."
+      }
+    ]
+  },
+  "sharedStateObservations": [
+    {
+      "area": "skills",
+      "observation": "The `web-game-worker` skill says to use `agent-browser` for manual verification, but this worker had to fall back to Playwright browser tools after an `agent-browser` socket issue. The skill should explicitly document Playwright browser tools as an accepted fallback when the dedicated browser agent is blocked by local daemon/session problems.",
+      "evidence": "Skill file `.factory/skills/web-game-worker/SKILL.md` step 6 requires `agent-browser`; handoff `skillFeedback.deviations[1]` says the worker used built-in Playwright browser tools instead because the `agent-browser` session could not start reliably due to a stale local socket."
+    }
+  ],
+  "addressesFailureFrom": null,
+  "summary": "Review passed. The home shell implementation satisfies the feature's scoped requirements, with one non-blocking issue around duplicate history entries when the active mode card is clicked repeatedly."
+}
