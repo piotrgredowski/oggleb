@@ -71,6 +71,7 @@ type SoloRound = {
   statusMessage: string;
   solverResults: SolverResults | null;
   completedBy: 'timeout' | 'reveal' | null;
+  completionError: string | null;
   scoringEnabled: Record<string, boolean>;
   highlightedWord: string | null;
 };
@@ -136,12 +137,25 @@ export function App() {
   }, [dictionary.state, soloRound?.phase]);
 
   useEffect(() => {
-    if (!soloRound || soloRound.phase !== 'finishing' || dictionary.state !== 'ready' || !dictionary.trie) {
+    if (!soloRound || soloRound.phase !== 'finishing') {
       return;
     }
 
     setSoloRound((current) => {
-      if (!current || current.phase !== 'finishing' || !dictionary.trie) {
+      if (!current || current.phase !== 'finishing') {
+        return current;
+      }
+
+      if (dictionary.state === 'error') {
+        return {
+          ...current,
+          phase: 'finished',
+          completionError: 'Results could not be produced because the dictionary failed to load.',
+          statusMessage: 'Results could not be produced because the dictionary failed to load.',
+        };
+      }
+
+      if (dictionary.state !== 'ready' || !dictionary.trie) {
         return current;
       }
 
@@ -154,6 +168,7 @@ export function App() {
         ...current,
         phase: 'finished',
         solverResults,
+        completionError: null,
         scoringEnabled,
         statusMessage:
           current.completedBy === 'timeout'
@@ -202,6 +217,7 @@ export function App() {
       wordSet: new Set(),
       solverResults: null,
       completedBy: null,
+      completionError: null,
       scoringEnabled: {},
       highlightedWord: null,
       statusMessage: 'Board ready. Start finding words.',
@@ -255,6 +271,18 @@ export function App() {
         return current;
       }
 
+      if (dictionary.state === 'error') {
+        return {
+          ...current,
+          remainingSeconds: source === 'timeout' ? 0 : current.remainingSeconds,
+          phase: 'finished',
+          completedBy: source,
+          completionError: 'Results could not be produced because the dictionary failed to load.',
+          solverResults: null,
+          statusMessage: 'Results could not be produced because the dictionary failed to load.',
+        };
+      }
+
       const waitingForDictionary = dictionary.state !== 'ready' || !dictionary.trie;
       const solverResults = waitingForDictionary ? current.solverResults : findWords(current.board, dictionary.trie);
       const scoringEnabled = waitingForDictionary
@@ -266,6 +294,7 @@ export function App() {
         remainingSeconds: source === 'timeout' ? 0 : current.remainingSeconds,
         phase: waitingForDictionary ? 'finishing' : 'finished',
         completedBy: source,
+        completionError: null,
         solverResults,
         scoringEnabled,
         statusMessage: waitingForDictionary
@@ -316,7 +345,8 @@ export function App() {
       ? soloRound.solverResults.wordPaths[soloRound.highlightedWord].flat()
       : [],
   );
-  const canRevealEarly = showSoloPlay && soloRound?.phase === 'live' && dictionary.state === 'ready';
+  const canRevealEarly =
+    showSoloPlay && soloRound?.phase === 'live' && (dictionary.state === 'ready' || dictionary.state === 'error');
   const roundFinished = soloRound?.phase === 'finished';
 
   return (
@@ -569,6 +599,17 @@ export function App() {
                   )}
                 </ul>
               </div>
+
+              {roundFinished && soloRound.completionError ? (
+                <div className="status-card" data-testid="solo-error-state">
+                  <div className="eyebrow">Round complete</div>
+                  <h3>Dictionary error</h3>
+                  <p className="hero-copy">{soloRound.completionError}</p>
+                  <p className="field-note">
+                    Restart the round to try again with a fresh board once the dictionary asset is available.
+                  </p>
+                </div>
+              ) : null}
 
               {roundFinished && soloRound.solverResults ? (
                 <div className="results-shell" data-testid="solver-output">
