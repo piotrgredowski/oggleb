@@ -82,6 +82,30 @@ type PassPlayPlayer = {
   active: boolean;
 };
 
+type PassPlayTurnRecord = {
+  playerId: string;
+  playerName: string;
+  words: string[];
+  wordSet: Set<string>;
+};
+
+type PassPlayRound = {
+  seed: number;
+  board: ReturnType<typeof generateBoard>;
+  playerOrder: Array<{ id: string; name: string }>;
+  activePlayerIndex: number;
+  remainingSeconds: number;
+  phase: 'handoff' | 'live' | 'turn-complete' | 'round-complete';
+  turnRecords: Record<string, PassPlayTurnRecord>;
+  statusMessage: string;
+};
+
+type PendingPassPlayAction =
+  | { type: 'mode'; mode: Mode }
+  | { type: 'lang'; lang: Language }
+  | { type: 'duration'; durationSeconds: number }
+  | { type: 'multiplayer-overview' };
+
 type MultiplayerView = 'overview' | 'pass-play';
 
 const initialPassPlayPlayers = (): PassPlayPlayer[] => [
@@ -99,16 +123,23 @@ export function App() {
   const [guardMessage, setGuardMessage] = useState('');
   const [multiplayerView, setMultiplayerView] = useState<MultiplayerView>('overview');
   const [passPlayPlayers, setPassPlayPlayers] = useState<PassPlayPlayer[]>(() => initialPassPlayPlayers());
+  const [passPlayRound, setPassPlayRound] = useState<PassPlayRound | null>(null);
+  const [passPlayWordInput, setPassPlayWordInput] = useState('');
+  const [pendingPassPlayAction, setPendingPassPlayAction] = useState<PendingPassPlayAction | null>(null);
   const selectedModeCopy = modeCopy[state.mode];
   const modeCards = useMemo(() => Object.keys(modeCopy) as Mode[], []);
   const dictionary = useDictionary(state.lang);
   const soloTimerRef = useRef<number | null>(null);
+  const passPlayTimerRef = useRef<number | null>(null);
 
   useEffect(() => {
     const onPopState = () => {
       setState(readInitialState());
       setMultiplayerView('overview');
       setPassPlayPlayers(initialPassPlayPlayers());
+      setPassPlayRound(null);
+      setPassPlayWordInput('');
+      setPendingPassPlayAction(null);
     };
 
     window.addEventListener('popstate', onPopState);
@@ -197,6 +228,43 @@ export function App() {
     });
   }, [dictionary.state, dictionary.trie, soloRound]);
 
+  useEffect(() => {
+    if (passPlayRound?.phase !== 'live') {
+      if (passPlayTimerRef.current !== null) {
+        window.clearInterval(passPlayTimerRef.current);
+        passPlayTimerRef.current = null;
+      }
+      return;
+    }
+
+    passPlayTimerRef.current = window.setInterval(() => {
+      setPassPlayRound((current) => {
+        if (!current || current.phase !== 'live') {
+          return current;
+        }
+
+        if (current.remainingSeconds <= 1) {
+          const activePlayer = current.playerOrder[current.activePlayerIndex];
+          return {
+            ...current,
+            remainingSeconds: 0,
+            phase: current.activePlayerIndex === current.playerOrder.length - 1 ? 'round-complete' : 'turn-complete',
+            statusMessage: `${activePlayer?.name ?? 'Current player'}’s turn is locked in.`,
+          };
+        }
+
+        return { ...current, remainingSeconds: current.remainingSeconds - 1 };
+      });
+    }, 1000);
+
+    return () => {
+      if (passPlayTimerRef.current !== null) {
+        window.clearInterval(passPlayTimerRef.current);
+        passPlayTimerRef.current = null;
+      }
+    };
+  }, [passPlayRound?.phase]);
+
   function updateState(nextState: SetupState, historyMode: 'push' | 'replace' = 'replace') {
     setState(nextState);
     const query = buildQuery(nextState);
@@ -210,16 +278,66 @@ export function App() {
     window.history.replaceState(null, '', nextUrl);
   }
 
+  function applyPendingPassPlayAction(action: PendingPassPlayAction) {
+    setPendingPassPlayAction(null);
+    setPassPlayRound(null);
+    setPassPlayWordInput('');
+    setPassPlayPlayers(initialPassPlayPlayers());
+    setGuardMessage('');
+
+    if (action.type === 'multiplayer-overview') {
+      setMultiplayerView('overview');
+      return;
+    }
+
+    if (action.type === 'mode') {
+      setMultiplayerView('overview');
+      updateState({ ...state, mode: action.mode }, 'push');
+      return;
+    }
+
+    if (action.type === 'lang') {
+      updateState({ ...state, lang: action.lang }, 'replace');
+      return;
+    }
+
+    updateState({ ...state, durationSeconds: action.durationSeconds }, 'replace');
+  }
+
+  function queuePassPlayAction(action: PendingPassPlayAction) {
+    setPendingPassPlayAction(action);
+    setGuardMessage('');
+  }
+
   function patchState(patch: Partial<SetupState>, historyMode: 'push' | 'replace' = 'replace') {
     if (soloRound?.phase === 'live') {
       setGuardMessage('Restart to apply setup changes. The active board stays locked.');
       return;
     }
 
+    if (passPlayRound && passPlayRound.phase !== 'round-complete') {
+      if (patch.mode) {
+        queuePassPlayAction({ type: 'mode', mode: patch.mode });
+        return;
+      }
+
+      if (patch.lang) {
+        queuePassPlayAction({ type: 'lang', lang: patch.lang });
+        return;
+      }
+
+      if (patch.durationSeconds && patch.durationSeconds !== state.durationSeconds) {
+        queuePassPlayAction({ type: 'duration', durationSeconds: patch.durationSeconds });
+        return;
+      }
+    }
+
     setGuardMessage('');
     if (patch.mode && patch.mode !== 'multiplayer') {
       setMultiplayerView('overview');
       setPassPlayPlayers(initialPassPlayPlayers());
+      setPassPlayRound(null);
+      setPassPlayWordInput('');
     }
     updateState({ ...state, ...patch }, historyMode);
   }
@@ -335,6 +453,146 @@ export function App() {
     startSoloRound();
   }
 
+  function startPassPlayRound() {
+    const playerOrder = activePassPlayPlayers.map((player) => ({
+      id: player.id,
+      name: player.name.trim(),
+    }));
+    const seed = createRandomSeed();
+    const board = generateBoard(state.lang, seed);
+    const turnRecords = Object.fromEntries(
+      playerOrder.map((player) => [
+        player.id,
+        {
+          playerId: player.id,
+          playerName: player.name,
+          words: [],
+          wordSet: new Set<string>(),
+        } satisfies PassPlayTurnRecord,
+      ]),
+    ) as Record<string, PassPlayTurnRecord>;
+
+    setGuardMessage('');
+    setPendingPassPlayAction(null);
+    setPassPlayWordInput('');
+    setPassPlayRound({
+      seed,
+      board,
+      playerOrder,
+      activePlayerIndex: 0,
+      remainingSeconds: state.durationSeconds,
+      phase: 'handoff',
+      turnRecords,
+      statusMessage: `${playerOrder[0]?.name ?? 'First player'}, get ready for your turn.`,
+    });
+  }
+
+  function startPassPlayTurn() {
+    setPassPlayWordInput('');
+    setPassPlayRound((current) => {
+      if (!current || current.phase !== 'handoff') {
+        return current;
+      }
+
+      return {
+        ...current,
+        remainingSeconds: state.durationSeconds,
+        phase: 'live',
+        statusMessage: `${current.playerOrder[current.activePlayerIndex]?.name ?? 'Current player'} is live. Only this player’s words are visible.`,
+      };
+    });
+  }
+
+  function addPassPlayWord() {
+    const normalizedWord = normalizeWord(passPlayWordInput);
+
+    setPassPlayRound((current) => {
+      if (!current || current.phase !== 'live') {
+        return current;
+      }
+
+      const activePlayer = current.playerOrder[current.activePlayerIndex];
+      const currentRecord = current.turnRecords[activePlayer.id];
+
+      if (!normalizedWord) {
+        return {
+          ...current,
+          statusMessage: 'Type a word before submitting.',
+        };
+      }
+
+      if (currentRecord.wordSet.has(normalizedWord)) {
+        return {
+          ...current,
+          statusMessage: `Already added: ${normalizedWord}`,
+        };
+      }
+
+      const nextWordSet = new Set(currentRecord.wordSet);
+      nextWordSet.add(normalizedWord);
+
+      return {
+        ...current,
+        turnRecords: {
+          ...current.turnRecords,
+          [activePlayer.id]: {
+            ...currentRecord,
+            words: [...currentRecord.words, normalizedWord],
+            wordSet: nextWordSet,
+          },
+        },
+        statusMessage: `Added ${normalizedWord}`,
+      };
+    });
+
+    setPassPlayWordInput('');
+  }
+
+  function finishPassPlayTurn() {
+    setPassPlayRound((current) => {
+      if (!current || current.phase !== 'live') {
+        return current;
+      }
+
+      const activePlayer = current.playerOrder[current.activePlayerIndex];
+      return {
+        ...current,
+        phase: current.activePlayerIndex === current.playerOrder.length - 1 ? 'round-complete' : 'turn-complete',
+        statusMessage: `${activePlayer?.name ?? 'Current player'}’s turn is locked in.`,
+      };
+    });
+    setPassPlayWordInput('');
+  }
+
+  function advancePassPlayTurn() {
+    setPassPlayWordInput('');
+    setPassPlayRound((current) => {
+      if (!current || current.phase !== 'turn-complete') {
+        return current;
+      }
+
+      const nextPlayerIndex = current.activePlayerIndex + 1;
+      const nextPlayer = current.playerOrder[nextPlayerIndex];
+
+      return {
+        ...current,
+        activePlayerIndex: nextPlayerIndex,
+        remainingSeconds: state.durationSeconds,
+        phase: 'handoff',
+        statusMessage: `${nextPlayer?.name ?? 'Next player'}, get ready for your turn.`,
+      };
+    });
+  }
+
+  function onPassPlayWordKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== 'Enter') {
+      return;
+    }
+
+    event.preventDefault();
+    addPassPlayWord();
+  }
+
   function onWordKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key !== 'Enter') {
       return;
@@ -400,6 +658,9 @@ export function App() {
     passPlayRosterMessage = passPlayPlayerErrors.values().next().value ?? 'Fix the roster before starting.';
   }
   const passPlayRosterReady = activePassPlayPlayers.length >= 2 && passPlayPlayerErrors.size === 0;
+  const activePassPlayPlayer = passPlayRound?.playerOrder[passPlayRound.activePlayerIndex] ?? null;
+  const activePassPlayRecord = activePassPlayPlayer ? passPlayRound?.turnRecords[activePassPlayPlayer.id] : null;
+  const showPassPlayActiveRound = state.mode === 'multiplayer' && multiplayerView === 'pass-play' && passPlayRound !== null;
 
   return (
     <main className={`app-shell${mobileSoloFocus ? ' mobile-solo-focus' : ''}`}>
@@ -807,7 +1068,7 @@ export function App() {
                 </div>
               ) : null}
 
-              {state.mode === 'multiplayer' && multiplayerView === 'pass-play' ? (
+              {state.mode === 'multiplayer' && multiplayerView === 'pass-play' && !showPassPlayActiveRound ? (
                 <div className="pass-play-setup-shell">
                   <div className="pass-play-heading-row">
                     <div>
@@ -883,10 +1144,160 @@ export function App() {
                   </div>
 
                   <div className="action-row">
-                    <button type="button" className="primary-button" disabled={!passPlayRosterReady}>
+                    <button
+                      type="button"
+                      className="primary-button"
+                      disabled={!passPlayRosterReady}
+                      onClick={startPassPlayRound}
+                    >
                       Start pass-and-play round
                     </button>
                   </div>
+                </div>
+              ) : null}
+
+              {showPassPlayActiveRound && passPlayRound && activePassPlayPlayer ? (
+                <div className="pass-play-round-shell">
+                  {pendingPassPlayAction ? (
+                    <div className="guard-banner pass-play-abandon-guard" data-testid="pass-play-abandon-guard">
+                      <strong>Leave pass-and-play and abandon this local round?</strong>
+                      <p className="hero-copy">
+                        Changing mode or setup now would discard the shared board and every hidden turn.
+                      </p>
+                      <div className="action-row">
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => setPendingPassPlayAction(null)}
+                        >
+                          Keep current round
+                        </button>
+                        <button
+                          type="button"
+                          className="primary-button"
+                          onClick={() => applyPendingPassPlayAction(pendingPassPlayAction)}
+                        >
+                          Abandon round
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {passPlayRound.phase === 'handoff' ? (
+                    <div className="status-card pass-play-handoff-card" data-testid="pass-play-handoff">
+                      <div className="eyebrow">Private handoff</div>
+                      <h3>{activePassPlayPlayer.name}, get ready for your turn.</h3>
+                      <p className="hero-copy">
+                        Pass the device now. Only this player’s entries will appear after the explicit start action.
+                      </p>
+                      <div className="results-summary-grid">
+                        <div className="summary-pill">Board seed: {passPlayRound.seed}</div>
+                        <div className="summary-pill" data-testid="timer-chip">
+                          {formatTimer(state.durationSeconds)}
+                        </div>
+                        <div className="summary-pill">Player {passPlayRound.activePlayerIndex + 1} of {passPlayRound.playerOrder.length}</div>
+                      </div>
+                      <div className="action-row">
+                        <button type="button" className="primary-button" onClick={startPassPlayTurn}>
+                          Start {activePassPlayPlayer.name}’s turn
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {passPlayRound.phase === 'live' ? (
+                    <div className="solo-live-shell pass-play-live-shell">
+                      <div className="solo-live-header">
+                        <div>
+                          <div className="eyebrow">Pass-and-play live</div>
+                          <h3 data-testid="pass-play-active-player">{activePassPlayPlayer.name}</h3>
+                        </div>
+                        <div className="solo-live-chips">
+                          <div className="summary-pill" data-testid="timer-chip">
+                            {formatTimer(passPlayRound.remainingSeconds)}
+                          </div>
+                          <div className="summary-pill">
+                            Shared board for all {passPlayRound.playerOrder.length} players
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        className="solo-board"
+                        style={{
+                          gridTemplateColumns: `repeat(${passPlayRound.board.cols}, minmax(0, 1fr))`,
+                        }}
+                      >
+                        {passPlayRound.board.cells.map((cell) => (
+                          <div key={cell.id} className="board-cell" data-testid="board-cell">
+                            {cell.value}
+                          </div>
+                        ))}
+                      </div>
+
+                      <div className="solo-composer pass-play-composer">
+                        <label className="field solo-word-field">
+                          <span>Word entry</span>
+                          <input
+                            aria-label="Word entry"
+                            value={passPlayWordInput}
+                            onChange={(event) => setPassPlayWordInput(event.target.value)}
+                            onKeyDown={onPassPlayWordKeyDown}
+                            placeholder="Type a word"
+                          />
+                        </label>
+                        <button type="button" className="primary-button add-word-button" onClick={addPassPlayWord}>
+                          Add word
+                        </button>
+                        <button type="button" className="secondary-button" onClick={finishPassPlayTurn}>
+                          End {activePassPlayPlayer.name}’s turn
+                        </button>
+                      </div>
+
+                      <p className="field-note" data-testid="word-status">
+                        {passPlayRound.statusMessage}
+                      </p>
+
+                      <div className="status-card player-word-card pass-play-active-words-card" data-testid="pass-play-active-words">
+                        <div className="eyebrow">Private entries</div>
+                        <p className="hero-copy">
+                          Only {activePassPlayPlayer.name} can see this list during the live turn.
+                        </p>
+                        <ul className="word-list-live">
+                          {activePassPlayRecord && activePassPlayRecord.words.length > 0 ? (
+                            activePassPlayRecord.words.map((word) => <li key={word}>{word}</li>)
+                          ) : (
+                            <li className="word-list-empty">No words entered yet.</li>
+                          )}
+                        </ul>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {passPlayRound.phase === 'turn-complete' ? (
+                    <div className="status-card pass-play-turn-complete-card" data-testid="pass-play-turn-complete">
+                      <div className="eyebrow">Turn complete</div>
+                      <h3>{activePassPlayPlayer.name}’s turn is locked in.</h3>
+                      <p className="hero-copy">
+                        The board stays the same for the next player, but private entries stay hidden until the final summary.
+                      </p>
+                      <div className="action-row">
+                        <button type="button" className="primary-button" onClick={advancePassPlayTurn}>
+                          Continue to next player
+                        </button>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {passPlayRound.phase === 'round-complete' ? (
+                    <div className="status-card pass-play-turn-complete-card" data-testid="pass-play-round-complete">
+                      <div className="eyebrow">All turns complete</div>
+                      <h3>Every player finished one private turn.</h3>
+                      <p className="hero-copy">
+                        The shared board stayed fixed and each turn used a fresh timer. The detailed summary lands in the next slice.
+                      </p>
+                    </div>
+                  ) : null}
                 </div>
               ) : null}
 

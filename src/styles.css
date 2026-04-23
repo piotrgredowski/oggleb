@@ -358,7 +358,8 @@ select {
 
 .multiplayer-branch-shell,
 .pass-play-setup-shell,
-.pass-play-roster-list {
+.pass-play-roster-list,
+.pass-play-round-shell {
   display: grid;
   gap: 16px;
 }
@@ -409,6 +410,21 @@ select {
   background: rgba(123, 246, 180, 0.12);
   border-color: rgba(123, 246, 180, 0.3);
   color: #c9f7dd;
+}
+
+.pass-play-handoff-card,
+.pass-play-turn-complete-card,
+.pass-play-abandon-guard {
+  display: grid;
+  gap: 16px;
+}
+
+.pass-play-live-shell {
+  gap: 16px;
+}
+
+.pass-play-active-words-card {
+  display: grid;
 }
 
 .results-shell,
