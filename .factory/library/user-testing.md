@@ -49,3 +49,27 @@ Testing surface, tooling guidance, and runtime validation notes.
 - `file://` support remains required where feasible, but browser clipboard behavior may vary by environment
 - Built-in Playwright browser navigation in this Factory environment may reject direct `file://` URLs with `Access to "file:" protocol is blocked`; when that happens, use the Playwright test runtime or a manual browser check for `file://` validation and record the tool limitation in the evidence
 - Shared-code multiplayer must not rely on backend room presence, so validators should treat any websocket/session dependency as a failure
+
+## Flow Validator Guidance: browser-core-solo-desktop
+
+- Surface: browser UI on `http://127.0.0.1:8136`
+- Isolation boundary: use a dedicated fresh browser session/profile for this validator only; do not reuse tabs or storage from another validator
+- Focus on desktop assertions for home and solo flows only
+- Stay within local app validation; do not modify app source or mission files beyond your assigned flow report/evidence outputs
+- Capture screenshots, snapshot text, URL state, and console errors for every assigned assertion
+
+## Flow Validator Guidance: browser-core-solo-mobile
+
+- Surface: browser UI on `http://127.0.0.1:8136`
+- Isolation boundary: use a dedicated fresh browser session/profile for this validator only; do not reuse tabs or storage from another validator
+- Focus on mobile/narrow viewport assertions for home and solo flows only
+- Stay within local app validation; do not modify app source or mission files beyond your assigned flow report/evidence outputs
+- Capture screenshots, snapshot text, URL state, and console errors for every assigned assertion
+
+## Flow Validator Guidance: browser-core-solo-results
+
+- Surface: browser UI on `http://127.0.0.1:8136`
+- Isolation boundary: use a dedicated fresh browser session/profile for this validator only; do not reuse tabs or storage from another validator
+- Focus on reveal/results/restart/dictionary-error assertions, including desktop hover checks where needed
+- Stay within local app validation; do not modify app source or mission files beyond your assigned flow report/evidence outputs
+- Capture screenshots, snapshot text, URL state, and console errors for every assigned assertion

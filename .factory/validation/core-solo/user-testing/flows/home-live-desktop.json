@@ -1,0 +1,238 @@
+{
+  "groupId": "home-live-desktop",
+  "testedAt": "2026-04-22T20:54:35.265695+00:00",
+  "isolation": {
+    "appUrl": "http://127.0.0.1:8136",
+    "browserSession": "core-solo-home-live-desktop",
+    "surface": "desktop browser",
+    "localhostOnly": true,
+    "freshIsolatedSession": true,
+    "missionDir": "/Users/pg/.factory/missions/0425d037-2167-448e-a74b-ed8e0a0ba29e"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-HOME-001",
+      "title": "Desktop home shows three first-class modes",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open the app on desktop viewport",
+          "expected": "Home shows Solo, TV Display, and Multiplayer together above the fold",
+          "observed": "All three labeled mode cards were visible simultaneously on initial load"
+        },
+        {
+          "action": "Capture snapshot text and screenshot",
+          "expected": "The three CTAs remain present in one initial home state",
+          "observed": "Snapshot and annotated screenshot both showed Solo, TV Display, and Multiplayer in the initial home view"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-desktop/VAL-HOME-001-home-annotated.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/"
+        ],
+        "snapshot": "Initial snapshot exposed three pressed/visible mode cards: Solo, TV Display, Multiplayer.",
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-HOME-003",
+      "title": "Pre-game home hides in-round gameplay UI",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect initial home state before starting a round",
+          "expected": "No active in-round board, scoring, or results UI competes with setup",
+          "observed": "Home showed setup content with disabled word entry, no active board, no scorekeeping pane, and no revealed results"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-desktop/VAL-HOME-001-home-annotated.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/"
+        ],
+        "snapshot": "Body text stated 'No board, score, word entry, or results state appears before play begins' and only pre-start controls were interactive.",
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-HOME-004",
+      "title": "Home setup controls update visible state and URL",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Change language from Polski to English and increase timer twice",
+          "expected": "Visible setup state and URL query update together without leaving home",
+          "observed": "Visible labels changed to English and 3 min, and the URL updated to ?lang=eng&t=180&mode=solo"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-desktop/VAL-HOME-004-home-settings-updated.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/",
+          "http://127.0.0.1:8136/?lang=eng&t=180&mode=solo"
+        ],
+        "snapshot": "Updated page text showed Language: English and Timer: 3 min while still on the home/setup surface.",
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-HOME-005",
+      "title": "Duration controls enforce safe boundaries",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Click +1 min repeatedly past the supported maximum",
+          "expected": "Timer clamps at the max instead of exceeding it",
+          "observed": "Timer stopped at 10 min and URL stopped at t=600"
+        },
+        {
+          "action": "Click -1 min repeatedly past the supported minimum",
+          "expected": "Timer clamps at the min instead of going below it",
+          "observed": "Timer stopped at 1 min and URL stopped at t=60"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-desktop/VAL-HOME-005-duration-max-clamp.png",
+          "core-solo/home-live-desktop/VAL-HOME-005-duration-min-clamp.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/?lang=eng&t=600&mode=solo",
+          "http://127.0.0.1:8136/?lang=eng&t=60&mode=solo"
+        ],
+        "snapshot": "Visible timer text clamped at 10 min / 10:00 and 1 min / 01:00 with matching query-string values.",
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-HOME-006",
+      "title": "Solo mode enters a playable solo round cleanly",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Start a solo round from the home/setup surface",
+          "expected": "A live solo round appears with board, timer, and solo controls",
+          "observed": "The board rendered, countdown began at 00:58 after load, word entry and Add word became enabled, and Reveal/Restart controls appeared"
+        },
+        {
+          "action": "Check active controls",
+          "expected": "Home mode-selection UI should no longer compete for attention",
+          "observed": "Interactive snapshot showed only solo controls; Solo/TV/Multiplayer mode cards were no longer interactive in live play"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-desktop/VAL-HOME-006-solo-live.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/?lang=eng&t=60&mode=solo"
+        ],
+        "snapshot": "Live snapshot exposed only Language, timer adjusters, Word entry, Add word, Reveal words, and Restart round alongside board letters.",
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-HOME-016",
+      "title": "Direct setup URL restores home selections without auto-start",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open the app directly with ?lang=rus&t=300&mode=solo",
+          "expected": "Home/setup surface restores selections and does not auto-start play",
+          "observed": "Home opened with Русский selected, timer at 5 min, all three mode CTAs visible, and the round remained in pre-start state with disabled entry"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-desktop/VAL-HOME-016-direct-setup-url.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/?lang=rus&t=300&mode=solo"
+        ],
+        "snapshot": "Snapshot showed the restored home setup plus visible Solo / TV Display / Multiplayer buttons and a disabled Word entry textbox.",
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-002",
+      "title": "Pre-start settings update visible state without starting a round",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Stay on solo pre-start and change persisted settings before play",
+          "expected": "Visible setup updates and URL stays in sync without auto-starting a round",
+          "observed": "Solo pre-start reflected English and 3 min while staying in pre-start with disabled entry and start CTA still required"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-desktop/VAL-SOLO-002-solo-prestart-updated.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/?lang=eng&t=180&mode=solo"
+        ],
+        "snapshot": "Pre-start solo remained visible with disabled Word entry and Start solo round after settings changed.",
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-015",
+      "title": "Solo surface is isolated from multiplayer chrome",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect solo live play after starting a round",
+          "expected": "Multiplayer join fields, host/join panels, and share-code actions are absent",
+          "observed": "Live solo showed only board, timer, entry, reveal, and restart controls; no multiplayer join inputs, lobby panels, or share-code actions appeared"
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-desktop/VAL-SOLO-015-solo-live-no-multiplayer.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/?lang=eng&t=180&mode=solo"
+        ],
+        "snapshot": "Interactive snapshot during live play contained no multiplayer-specific controls.",
+        "consoleErrors": "none"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "The Playwright MCP browser instance was locked by another process, so direct Playwright tool use failed with a shared-browser error.",
+      "resolved": true,
+      "resolution": "Switched to the required agent-browser skill using a dedicated isolated session name for the assigned localhost flow.",
+      "affectedAssertions": [
+        "VAL-HOME-001",
+        "VAL-HOME-003",
+        "VAL-HOME-004",
+        "VAL-HOME-005",
+        "VAL-HOME-006",
+        "VAL-HOME-016",
+        "VAL-SOLO-002",
+        "VAL-SOLO-015"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 8 assigned desktop home/solo assertions on localhost: all 8 passed with no console errors observed. Evidence was captured under the mission evidence directory using an isolated agent-browser session."
+}

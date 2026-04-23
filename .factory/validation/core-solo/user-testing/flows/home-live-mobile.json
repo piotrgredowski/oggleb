@@ -1,0 +1,219 @@
+{
+  "groupId": "home-live-mobile",
+  "testedAt": "2026-04-22T20:55:37.322781Z",
+  "isolation": {
+    "appUrl": "http://127.0.0.1:8136",
+    "missionDir": "/Users/pg/.factory/missions/0425d037-2167-448e-a74b-ed8e0a0ba29e",
+    "viewport": {
+      "width": 390,
+      "height": 844
+    },
+    "session": "fresh isolated browser context",
+    "localhostOnly": true
+  },
+  "toolsUsed": [
+    "agent-browser",
+    "playwright-mcp"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-HOME-002",
+      "title": "Mobile home keeps mode selection prominent and usable",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open the app on a 390x844 viewport",
+          "expected": "Mobile home renders cleanly",
+          "observed": "Home rendered at / with no overlap or clipping."
+        },
+        {
+          "action": "Inspect initial home layout",
+          "expected": "Solo, TV Display, and Multiplayer are all visible and tappable",
+          "observed": "All three mode CTAs were visible in the initial mobile view above the fold and remained readable/tappable."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-mobile/VAL-HOME-002-mobile-home.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-001",
+      "title": "Fresh solo setup is clear before play starts",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Inspect first-load solo pre-start state",
+          "expected": "Visible setup controls, visible timer, disabled word entry, inactive board/results, one primary start action",
+          "observed": "Language and timer controls were visible, timer showed 01:00, word entry was disabled, reveal was disabled, and Start solo round was the obvious primary action."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-mobile/VAL-HOME-002-mobile-home.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-003",
+      "title": "Starting solo creates a playable live round",
+      "status": "fail",
+      "steps": [
+        {
+          "action": "Tap Start solo round",
+          "expected": "Setup hides, populated board appears, countdown starts once board is ready, and word entry becomes usable",
+          "observed": "A populated board, live timer, and enabled word entry appeared and the timer started after the board loaded."
+        },
+        {
+          "action": "Inspect active-round chrome",
+          "expected": "Setup state is hidden during live play",
+          "observed": "The live round still showed the home header, mode section, language selector, and round-length controls above the board instead of hiding setup state."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-mobile/VAL-SOLO-003-live-round.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": "Live play remained playable, but setup/home UI was not hidden; it continued competing for space above the active solo board."
+    },
+    {
+      "id": "VAL-SOLO-004",
+      "title": "Live word entry accepts new words and rejects duplicates predictably",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Enter TEST and submit once",
+          "expected": "Word is added once",
+          "observed": "Status changed to 'Added TEST' and the entered-words list contained a single TEST row."
+        },
+        {
+          "action": "Enter TEST again and resubmit",
+          "expected": "Clear duplicate feedback with no second row",
+          "observed": "Status changed to 'Already added: TEST' and the entered-words list still contained only one TEST row."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-mobile/VAL-SOLO-004-duplicate-feedback.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-005",
+      "title": "Countdown stays legible and final-seconds urgency is visible",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Observe active round after start",
+          "expected": "Timer stays visible and legible",
+          "observed": "The timer stayed visible beside dictionary status during live play."
+        },
+        {
+          "action": "Wait for final seconds",
+          "expected": "Urgency state appears without obscuring letters",
+          "observed": "A final-seconds warning appeared while the board letters and controls remained readable."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-mobile/VAL-SOLO-003-live-round.png",
+          "core-solo/home-live-mobile/VAL-SOLO-011-entered-words-expanded.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-006",
+      "title": "Mid-round setup changes are explicit rather than surprising",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "During a live round, tap +1 min",
+          "expected": "Active board does not silently mutate and change is gated by an explicit restart/confirm flow",
+          "observed": "The UI showed 'Restart to apply setup changes. The active board stays locked.' and the board letters stayed the same until timeout/results."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-mobile/VAL-SOLO-006-before-midround-change.png",
+          "core-solo/home-live-mobile/VAL-SOLO-006-after-midround-change.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-011",
+      "title": "Mobile solo flow is tap-first and overflow-safe",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Play solo on a 390x844 viewport",
+          "expected": "Primary actions remain reachable without horizontal scrolling",
+          "observed": "No horizontal overflow was observed; add/reveal/restart and show/hide entered-words controls remained reachable with vertical scrolling."
+        },
+        {
+          "action": "Focus word entry and inspect submit action",
+          "expected": "Input and submit action remain usable while typing",
+          "observed": "With the input focused and populated, the Add word button remained visible and usable in the narrow viewport."
+        },
+        {
+          "action": "Expand entered words during play",
+          "expected": "List drawer expands/collapses without blocking core play",
+          "observed": "The entered-words section expanded inline and still left live play controls accessible by normal page scrolling."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/home-live-mobile/VAL-SOLO-011-keyboard-input-focused.png",
+          "core-solo/home-live-mobile/VAL-SOLO-011-entered-words-expanded.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/"
+        ],
+        "consoleErrors": "none"
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "This local browser automation environment did not display a real mobile software keyboard, so focused-input state was used as the closest approximation for the keyboard-open portion of VAL-SOLO-011.",
+      "resolved": true,
+      "resolution": "Validated the narrow viewport with the word input focused and populated, confirming the primary submit action remained visible and usable.",
+      "affectedAssertions": [
+        "VAL-SOLO-011"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 7 assertions: 6 passed and 1 failed. VAL-SOLO-003 failed because starting solo left home/setup UI visible above the live board instead of hiding setup state during active play."
+}

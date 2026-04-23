@@ -1,0 +1,234 @@
+{
+  "groupId": "results-restart",
+  "testedAt": "2026-04-22T21:04:51.889612+00:00",
+  "isolation": {
+    "appUrl": "http://127.0.0.1:8136",
+    "browserSession": "results-restart",
+    "scope": "localhost-only isolated browser session",
+    "missionDir": "/Users/pg/.factory/missions/0425d037-2167-448e-a74b-ed8e0a0ba29e"
+  },
+  "toolsUsed": [
+    "agent-browser"
+  ],
+  "assertions": [
+    {
+      "id": "VAL-SOLO-007",
+      "title": "Timer expiry and manual reveal converge to the same end state",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Start an English solo round, enter test words, and trigger early reveal.",
+          "expected": "Reveal ends the round with locked entry, results visible, and post-round controls available.",
+          "observed": "Manual reveal showed Solo results, kept Restart round / Reveal words controls visible, and exposed scoring plus result inspection."
+        },
+        {
+          "action": "Restart into a fresh round and wait for the 1-minute timer to expire naturally.",
+          "expected": "Timeout should land on the same visible post-round surface as manual reveal.",
+          "observed": "Timeout reached 00:00 and showed the same Solo results surface with the same post-round affordances and locked entry."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/results-restart/VAL-SOLO-007-manual-reveal-results-desktop.png",
+          "core-solo/results-restart/VAL-SOLO-007-timeout-results-desktop.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/?lang=eng&t=60&mode=solo"
+        ],
+        "consoleErrors": "none observed via agent-browser errors",
+        "network": "No backend/API calls involved; localhost document + static assets only."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-008",
+      "title": "Results summarize the board and sort words for scanning",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Reveal a completed English solo round on desktop.",
+          "expected": "Results should summarize totals and show solver words sorted longest to shortest.",
+          "observed": "Desktop results showed Found words / Entered / Score summary, and solver output began with 8-letter words before shorter entries."
+        },
+        {
+          "action": "Resize to a phone viewport on the same results screen.",
+          "expected": "Results should remain readable and scannable on mobile.",
+          "observed": "The same summary and sorted solver list remained visible in the narrow mobile layout."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/results-restart/VAL-SOLO-007-manual-reveal-results-desktop.png",
+          "core-solo/results-restart/VAL-SOLO-008-results-mobile.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/?lang=eng&t=60&mode=solo"
+        ],
+        "consoleErrors": "none observed via agent-browser errors",
+        "network": "No backend/API calls involved; localhost document + static assets only."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-009",
+      "title": "Post-round validation and score feedback are transparent",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Enter two valid words (TAXIES, AERATE) and one invalid word (ZZZ), then reveal.",
+          "expected": "Each entered word remains visible with valid/invalid status and point values.",
+          "observed": "Results kept all three entries visible, marked TAXIES and AERATE valid, marked ZZZ invalid, and displayed point values."
+        },
+        {
+          "action": "Toggle the TAXIES uniqueness checkbox off.",
+          "expected": "The total score should recalculate immediately.",
+          "observed": "The score changed immediately from 6 to 3 when TAXIES was unchecked."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/results-restart/VAL-SOLO-007-manual-reveal-results-desktop.png",
+          "core-solo/results-restart/VAL-SOLO-009-score-toggle-updated.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/?lang=eng&t=60&mode=solo"
+        ],
+        "consoleErrors": "none observed via agent-browser errors",
+        "network": "No backend/API calls involved; localhost document + static assets only."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-010",
+      "title": "Desktop inspection can reveal a found word's board path",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Hover the valid result word TAXIES on desktop.",
+          "expected": "Its board path should highlight.",
+          "observed": "Hovering TAXIES highlighted 6 board cells matching the word path."
+        },
+        {
+          "action": "Move the pointer off the result word.",
+          "expected": "The board highlight should clear.",
+          "observed": "After hover exit, highlighted cell count returned to 0."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/results-restart/VAL-SOLO-010-hover-highlight.png",
+          "core-solo/results-restart/VAL-SOLO-010-hover-cleared.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/?lang=eng&t=60&mode=solo"
+        ],
+        "consoleErrors": "none observed via agent-browser errors",
+        "network": "No backend/API calls involved; localhost document + static assets only."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-013",
+      "title": "Solo restart clears round-local state",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Reach a revealed results state with entered words, score, and solver output visible.",
+          "expected": "Restart should clear all round-local state.",
+          "observed": "The revealed state contained entered words, score, solver output, and result inspection controls."
+        },
+        {
+          "action": "Use Restart round and inspect the fresh board on desktop and mobile.",
+          "expected": "A fresh round should show a new board/timer with cleared words, results, score summary, highlights, and collapsed mobile drawer.",
+          "observed": "Restart produced a new board at 01:00, cleared entered words and results, removed score summary/highlights, and showed the mobile button as Show entered words (collapsed)."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/results-restart/VAL-SOLO-007-manual-reveal-results-desktop.png",
+          "core-solo/results-restart/VAL-SOLO-013-restart-mobile-fresh.png",
+          "core-solo/results-restart/VAL-SOLO-013-restart-desktop-fresh.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/?lang=eng&t=60&mode=solo"
+        ],
+        "consoleErrors": "none observed via agent-browser errors",
+        "network": "No backend/API calls involved; localhost document + static assets only."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-014",
+      "title": "Dictionary readiness gates reveal and fails visibly",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open solo setup with English selected and observe dictionary status before and after the trie loads.",
+          "expected": "The UI should show loading then ready, with reveal unavailable while the trie is not ready.",
+          "observed": "Setup showed Loading dictionary\u2026 before switching to Dictionary ready; pre-start reveal remained unavailable while loading."
+        },
+        {
+          "action": "Abort en_dict_trie.js in the isolated browser session, reopen the app, start a round, and reveal.",
+          "expected": "The UI should show a clear dictionary failure instead of silently failing.",
+          "observed": "The app showed Dictionary failed to load, allowed restart/reveal controls to remain visible, and surfaced a Dictionary error card after reveal."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/results-restart/VAL-SOLO-014-loading-gated.png",
+          "core-solo/results-restart/VAL-SOLO-014-ready.png",
+          "core-solo/results-restart/VAL-SOLO-014-error-state.png",
+          "core-solo/results-restart/VAL-SOLO-014-live-error-reveal-available.png",
+          "core-solo/results-restart/VAL-SOLO-014-round-error-after-reveal.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/?lang=eng&t=60&mode=solo"
+        ],
+        "consoleErrors": "none observed via agent-browser errors",
+        "network": "Blocked local asset request **/en_dict_trie.js inside the isolated browser session to verify the visible failure path; no backend/API calls involved."
+      },
+      "issues": null
+    },
+    {
+      "id": "VAL-SOLO-016",
+      "title": "Solver output stays hidden until reveal or timeout",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Start a fresh solo round and inspect the live state before reveal.",
+          "expected": "Solver output and results should remain hidden during active play.",
+          "observed": "The live round showed only the board, composer, and entered-word panel; no Solo results or solver list appeared before reveal."
+        },
+        {
+          "action": "Reveal or wait for timeout.",
+          "expected": "Solver output should appear only after round completion.",
+          "observed": "Solver output became visible only on the revealed/time-up results surfaces."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/results-restart/VAL-SOLO-016-active-hidden-results.png",
+          "core-solo/results-restart/VAL-SOLO-007-manual-reveal-results-desktop.png"
+        ],
+        "urls": [
+          "http://127.0.0.1:8136/?lang=eng&t=60&mode=solo"
+        ],
+        "consoleErrors": "none observed via agent-browser errors",
+        "network": "No backend/API calls involved; localhost document + static assets only."
+      },
+      "issues": null
+    }
+  ],
+  "frictions": [
+    {
+      "description": "A long agent-browser wait command hit a temporary daemon busy error while the timeout round was already progressing.",
+      "resolved": true,
+      "resolution": "Re-read the page state after the minute elapsed and captured the finished timeout results without restarting the validator session.",
+      "affectedAssertions": [
+        "VAL-SOLO-007"
+      ]
+    }
+  ],
+  "blockers": [],
+  "summary": "Tested 7 assigned core-solo results/restart assertions: 7 passed, 0 failed, 0 blocked."
+}
