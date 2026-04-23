@@ -1,49 +1,18 @@
 {
   "milestone": "core-solo",
-  "round": 1,
-  "status": "fail",
+  "round": 2,
+  "status": "pass",
   "assertionsSummary": {
-    "total": 22,
-    "passed": 21,
-    "failed": 1,
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
     "blocked": 0
   },
   "passedAssertions": [
-    "VAL-HOME-001",
-    "VAL-HOME-003",
-    "VAL-HOME-004",
-    "VAL-HOME-005",
-    "VAL-HOME-006",
-    "VAL-HOME-016",
-    "VAL-SOLO-002",
-    "VAL-SOLO-015",
-    "VAL-HOME-002",
-    "VAL-SOLO-001",
-    "VAL-SOLO-004",
-    "VAL-SOLO-005",
-    "VAL-SOLO-006",
-    "VAL-SOLO-011",
-    "VAL-SOLO-007",
-    "VAL-SOLO-008",
-    "VAL-SOLO-009",
-    "VAL-SOLO-010",
-    "VAL-SOLO-013",
-    "VAL-SOLO-014",
-    "VAL-SOLO-016"
+    "VAL-SOLO-003"
   ],
-  "failedAssertions": [
-    {
-      "id": "VAL-SOLO-003",
-      "reason": "Live play remained playable, but setup/home UI was not hidden; it continued competing for space above the active solo board."
-    }
-  ],
+  "failedAssertions": [],
   "blockedAssertions": [],
-  "appliedUpdates": [
-    {
-      "target": "user-testing.md",
-      "description": "Added per-surface Flow Validator Guidance sections for the core-solo desktop, mobile, and results browser validators.",
-      "source": "setup"
-    }
-  ],
-  "previousRound": null
+  "appliedUpdates": [],
+  "previousRound": ".factory/validation/core-solo/user-testing/synthesis.json@round1"
 }

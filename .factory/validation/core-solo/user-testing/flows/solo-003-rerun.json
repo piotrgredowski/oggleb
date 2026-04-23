@@ -1,0 +1,61 @@
+{
+  "groupId": "solo-003-rerun",
+  "testedAt": "2026-04-23T05:58:30Z",
+  "isolation": {
+    "missionDir": "/Users/pg/.factory/missions/0425d037-2167-448e-a74b-ed8e0a0ba29e",
+    "appUrl": "http://127.0.0.1:8136",
+    "viewport": {
+      "width": 390,
+      "height": 844,
+      "mode": "mobile"
+    },
+    "session": "fresh isolated browser session"
+  },
+  "toolsUsed": ["agent-browser guidance", "playwright-browser"],
+  "assertions": [
+    {
+      "id": "VAL-SOLO-003",
+      "title": "Starting solo creates a playable live round",
+      "status": "pass",
+      "steps": [
+        {
+          "action": "Open the app on a mobile viewport and inspect the solo pre-start state",
+          "expected": "Solo setup is visible before play with disabled word entry and a start CTA",
+          "observed": "Pre-start home/solo surface showed `Dictionary ready`, timer `01:00`, disabled word entry, and `Start solo round`."
+        },
+        {
+          "action": "Tap `Start solo round`",
+          "expected": "Setup state hides and a live solo round renders",
+          "observed": "Setup controls were replaced by the live solo surface with a populated 4x4 board and play controls only."
+        },
+        {
+          "action": "Inspect the active round immediately after start/restart",
+          "expected": "Countdown begins only after the board is visibly ready, word entry is enabled, and controls remain reachable",
+          "observed": "Restart timeline showed the board fully populated and `Board ready. Start finding words.` with timer still at `01:00` for the first 750ms samples; timer dropped to `00:59` only after the ready state was visible. Word entry was enabled and `Add word`, `Reveal words`, `Restart round`, and `Show entered words` remained reachable on mobile."
+        }
+      ],
+      "evidence": {
+        "screenshots": [
+          "core-solo/solo-003-rerun/00-home-mobile.png",
+          "core-solo/solo-003-rerun/01-live-round-mobile.png"
+        ],
+        "snapshots": [
+          "core-solo/solo-003-rerun/00-home-snapshot.md",
+          "core-solo/solo-003-rerun/01-live-round-snapshot.md"
+        ],
+        "urls": [
+          "core-solo/solo-003-rerun/00-home-url.txt",
+          "core-solo/solo-003-rerun/01-live-round-url.txt"
+        ],
+        "timeline": "core-solo/solo-003-rerun/02-restart-timeline.json",
+        "consoleErrors": "core-solo/solo-003-rerun/03-console-errors.txt",
+        "network": "No relevant API/network activity beyond initial local page/assets fetch; no backend dependency observed for this assertion."
+      },
+      "issues": null,
+      "reasoning": "The tested mobile flow satisfied the contract language: starting solo hid setup UI, rendered a fully populated board, kept the timer at its full starting value until the ready state was already visible, enabled entry, and kept primary play controls reachable without overflow."
+    }
+  ],
+  "frictions": [],
+  "blockers": [],
+  "summary": "Retest passed: VAL-SOLO-003 now presents a playable mobile live round with visible ready state before countdown progression and reachable play controls."
+}
