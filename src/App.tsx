@@ -348,10 +348,11 @@ export function App() {
   const canRevealEarly =
     showSoloPlay && soloRound?.phase === 'live' && (dictionary.state === 'ready' || dictionary.state === 'error');
   const roundFinished = soloRound?.phase === 'finished';
+  const mobileSoloFocus = showSoloPlay && !roundFinished;
 
   return (
-    <main className="app-shell">
-      <section className="hero-card hero-layout">
+    <main className={`app-shell${mobileSoloFocus ? ' mobile-solo-focus' : ''}`}>
+      <section className="hero-card hero-layout home-hero">
         <div>
           <div className="eyebrow">Redesigned home</div>
           <h1>Choose how you want to play</h1>
@@ -406,12 +407,12 @@ export function App() {
         </section>
 
         <section className="panel setup-panel">
-          <div className="panel-heading">
+          <div className="panel-heading live-round-chrome">
             <h2>{showSoloPlay ? 'Solo round' : selectedModeCopy.primaryAction}</h2>
             <p>{selectedModeCopy.note}</p>
           </div>
 
-          <div className="setup-grid">
+          <div className="setup-grid live-round-chrome">
             <label className="field">
               <span>Language</span>
               <select
@@ -455,7 +456,7 @@ export function App() {
           </div>
 
           {guardMessage ? (
-            <div className="guard-banner" data-testid="round-guard">
+            <div className="guard-banner live-round-chrome" data-testid="round-guard">
               {guardMessage}
             </div>
           ) : null}
@@ -740,7 +741,7 @@ export function App() {
         </section>
       </section>
 
-      <section className="panel">
+      <section className="panel url-setup-panel">
         <div className="panel-heading">
           <h2>URL-backed setup</h2>
           <p>

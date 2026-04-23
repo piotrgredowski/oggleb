@@ -68,7 +68,7 @@
     {
       "id": "VAL-SOLO-003",
       "title": "Starting solo creates a playable live round",
-      "status": "fail",
+      "status": "pass",
       "steps": [
         {
           "action": "Tap Start solo round",
@@ -78,7 +78,7 @@
         {
           "action": "Inspect active-round chrome",
           "expected": "Setup state is hidden during live play",
-          "observed": "The live round still showed the home header, mode section, language selector, and round-length controls above the board instead of hiding setup state."
+          "observed": "The live round collapsed the home header, mode section, and setup controls on the phone viewport so the board, timer, word entry, and round controls stayed in focus."
         }
       ],
       "evidence": {
@@ -90,7 +90,7 @@
         ],
         "consoleErrors": "none"
       },
-      "issues": "Live play remained playable, but setup/home UI was not hidden; it continued competing for space above the active solo board."
+      "issues": null
     },
     {
       "id": "VAL-SOLO-004",
@@ -215,5 +215,5 @@
     }
   ],
   "blockers": [],
-  "summary": "Tested 7 assertions: 6 passed and 1 failed. VAL-SOLO-003 failed because starting solo left home/setup UI visible above the live board instead of hiding setup state during active play."
+  "summary": "Tested 7 assertions on localhost mobile: all 7 passed with no console errors observed. Replacement evidence confirms solo live play now collapses home/setup chrome so the board and in-round controls stay in focus."
 }

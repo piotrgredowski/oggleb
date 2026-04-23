@@ -453,6 +453,25 @@ code {
 }
 
 @media (max-width: 520px) {
+  .app-shell.mobile-solo-focus .home-hero,
+  .app-shell.mobile-solo-focus .mode-panel,
+  .app-shell.mobile-solo-focus .live-round-chrome,
+  .app-shell.mobile-solo-focus .url-setup-panel {
+    display: none;
+  }
+
+  .app-shell.mobile-solo-focus .mode-shell,
+  .app-shell.mobile-solo-focus .setup-panel {
+    display: block;
+  }
+
+  .app-shell.mobile-solo-focus .setup-panel {
+    padding: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
   .app-shell {
     gap: 18px;
     padding-bottom: 28px;
