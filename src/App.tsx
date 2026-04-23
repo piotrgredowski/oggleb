@@ -76,12 +76,29 @@ type SoloRound = {
   highlightedWord: string | null;
 };
 
+type PassPlayPlayer = {
+  id: string;
+  name: string;
+  active: boolean;
+};
+
+type MultiplayerView = 'overview' | 'pass-play';
+
+const initialPassPlayPlayers = (): PassPlayPlayer[] => [
+  { id: 'p1', name: '', active: true },
+  { id: 'p2', name: '', active: true },
+  { id: 'p3', name: '', active: false },
+  { id: 'p4', name: '', active: false },
+];
+
 export function App() {
   const [state, setState] = useState<SetupState>(() => readInitialState());
   const [soloRound, setSoloRound] = useState<SoloRound | null>(null);
   const [wordInput, setWordInput] = useState('');
   const [mobileWordsOpen, setMobileWordsOpen] = useState(false);
   const [guardMessage, setGuardMessage] = useState('');
+  const [multiplayerView, setMultiplayerView] = useState<MultiplayerView>('overview');
+  const [passPlayPlayers, setPassPlayPlayers] = useState<PassPlayPlayer[]>(() => initialPassPlayPlayers());
   const selectedModeCopy = modeCopy[state.mode];
   const modeCards = useMemo(() => Object.keys(modeCopy) as Mode[], []);
   const dictionary = useDictionary(state.lang);
@@ -90,6 +107,8 @@ export function App() {
   useEffect(() => {
     const onPopState = () => {
       setState(readInitialState());
+      setMultiplayerView('overview');
+      setPassPlayPlayers(initialPassPlayPlayers());
     };
 
     window.addEventListener('popstate', onPopState);
@@ -198,6 +217,10 @@ export function App() {
     }
 
     setGuardMessage('');
+    if (patch.mode && patch.mode !== 'multiplayer') {
+      setMultiplayerView('overview');
+      setPassPlayPlayers(initialPassPlayPlayers());
+    }
     updateState({ ...state, ...patch }, historyMode);
   }
 
@@ -349,6 +372,34 @@ export function App() {
     showSoloPlay && soloRound?.phase === 'live' && (dictionary.state === 'ready' || dictionary.state === 'error');
   const roundFinished = soloRound?.phase === 'finished';
   const mobileSoloFocus = showSoloPlay && !roundFinished;
+  const activePassPlayPlayers = passPlayPlayers.filter((player) => player.active);
+  const normalizedActivePassPlayNames = activePassPlayPlayers.map((player) => normalizeWord(player.name));
+  const duplicatePassPlayNames = new Set(
+    normalizedActivePassPlayNames.filter(
+      (name, index) => name && normalizedActivePassPlayNames.indexOf(name) !== index,
+    ),
+  );
+  const passPlayPlayerErrors = new Map<string, string>();
+
+  activePassPlayPlayers.forEach((player, index) => {
+    const normalizedName = normalizeWord(player.name);
+    if (!normalizedName) {
+      passPlayPlayerErrors.set(player.id, `Player ${index + 1} needs a visible name.`);
+      return;
+    }
+
+    if (duplicatePassPlayNames.has(normalizedName)) {
+      passPlayPlayerErrors.set(player.id, 'Player names must be unique.');
+    }
+  });
+
+  let passPlayRosterMessage = `Roster ready for ${activePassPlayPlayers.length} players.`;
+  if (activePassPlayPlayers.length < 2) {
+    passPlayRosterMessage = 'Add at least two players to start pass-and-play.';
+  } else if (passPlayPlayerErrors.size > 0) {
+    passPlayRosterMessage = passPlayPlayerErrors.values().next().value ?? 'Fix the roster before starting.';
+  }
+  const passPlayRosterReady = activePassPlayPlayers.length >= 2 && passPlayPlayerErrors.size === 0;
 
   return (
     <main className={`app-shell${mobileSoloFocus ? ' mobile-solo-focus' : ''}`}>
@@ -725,17 +776,135 @@ export function App() {
             <div className="status-card">
               <div className="eyebrow">{selectedModeCopy.eyebrow}</div>
               <h3>{selectedModeCopy.title} setup</h3>
-              <p className="hero-copy">{selectedModeCopy.description}</p>
-              <ul className="bullet-list">
-                {selectedModeCopy.bullets.map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
-                ))}
-              </ul>
-              <div className="action-row">
-                <button type="button" className="primary-button">
-                  Coming in the next slice
-                </button>
-              </div>
+              {state.mode === 'multiplayer' && multiplayerView === 'overview' ? (
+                <div className="multiplayer-branch-shell">
+                  <p className="hero-copy">
+                    Choose the multiplayer branch first so same-device pass-and-play stays distinct
+                    from backend-free shared-code hosting and joining.
+                  </p>
+                  <div className="multiplayer-branch-grid">
+                    <button
+                      type="button"
+                      className="mode-card multiplayer-branch-card"
+                      onClick={() => setMultiplayerView('pass-play')}
+                    >
+                      <span className="mode-eyebrow">Same device</span>
+                      <span className="mode-title">Pass-and-play on this device</span>
+                      <span className="mode-description">
+                        Build a local roster, hand the phone around, and keep every player&apos;s
+                        answers private to this device.
+                      </span>
+                    </button>
+                    <button type="button" className="mode-card multiplayer-branch-card">
+                      <span className="mode-eyebrow">Shared code</span>
+                      <span className="mode-title">Host or join with a shared code</span>
+                      <span className="mode-description">
+                        Shared-code hosting and joining stays separate from private pass-and-play
+                        roster setup.
+                      </span>
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {state.mode === 'multiplayer' && multiplayerView === 'pass-play' ? (
+                <div className="pass-play-setup-shell">
+                  <div className="pass-play-heading-row">
+                    <div>
+                      <div className="eyebrow">Same device</div>
+                      <h3>Pass-and-play roster</h3>
+                    </div>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => {
+                        setMultiplayerView('overview');
+                        setPassPlayPlayers(initialPassPlayPlayers());
+                      }}
+                    >
+                      Back to multiplayer
+                    </button>
+                  </div>
+                  <p className="hero-copy">
+                    Private pass-and-play state stays on this device only. Names, turn order, and
+                    entered words are not added to the URL or shared-code flow.
+                  </p>
+
+                  <div className="pass-play-roster-list">
+                    {passPlayPlayers.map((player, index) => {
+                      const playerNumber = index + 1;
+                      const error = player.active ? passPlayPlayerErrors.get(player.id) : null;
+                      return (
+                        <div key={player.id} className={`pass-play-player-card${player.active ? ' active' : ''}`}>
+                          <div className="pass-play-player-header">
+                            <label className="pass-play-toggle">
+                              <input
+                                aria-label={`Player ${playerNumber} active`}
+                                type="checkbox"
+                                checked={player.active}
+                                onChange={(event) =>
+                                  setPassPlayPlayers((current) =>
+                                    current.map((entry) =>
+                                      entry.id === player.id ? { ...entry, active: event.target.checked } : entry,
+                                    ),
+                                  )
+                                }
+                              />
+                              Player {playerNumber}
+                            </label>
+                            <span className="summary-pill">{player.active ? 'Active' : 'Optional'}</span>
+                          </div>
+                          <label className="field">
+                            <span>Player {playerNumber} name</span>
+                            <input
+                              aria-label={`Player ${playerNumber} name`}
+                              value={player.name}
+                              onChange={(event) =>
+                                setPassPlayPlayers((current) =>
+                                  current.map((entry) =>
+                                    entry.id === player.id ? { ...entry, name: event.target.value } : entry,
+                                  ),
+                                )
+                              }
+                              placeholder={player.active ? 'Enter name' : 'Optional player'}
+                            />
+                          </label>
+                          {error ? <p className="field-note pass-play-error">{error}</p> : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div
+                    className={`guard-banner pass-play-status${passPlayRosterReady ? ' ready' : ''}`}
+                    data-testid="pass-play-roster-status"
+                  >
+                    {passPlayRosterMessage}
+                  </div>
+
+                  <div className="action-row">
+                    <button type="button" className="primary-button" disabled={!passPlayRosterReady}>
+                      Start pass-and-play round
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+
+              {state.mode !== 'multiplayer' ? (
+                <>
+                  <p className="hero-copy">{selectedModeCopy.description}</p>
+                  <ul className="bullet-list">
+                    {selectedModeCopy.bullets.map((bullet) => (
+                      <li key={bullet}>{bullet}</li>
+                    ))}
+                  </ul>
+                  <div className="action-row">
+                    <button type="button" className="primary-button">
+                      Coming in the next slice
+                    </button>
+                  </div>
+                </>
+              ) : null}
             </div>
           ) : null}
         </section>

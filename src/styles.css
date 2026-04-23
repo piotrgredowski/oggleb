@@ -356,6 +356,61 @@ select {
   gap: 10px;
 }
 
+.multiplayer-branch-shell,
+.pass-play-setup-shell,
+.pass-play-roster-list {
+  display: grid;
+  gap: 16px;
+}
+
+.multiplayer-branch-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.multiplayer-branch-card {
+  width: 100%;
+}
+
+.pass-play-heading-row,
+.pass-play-player-header {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pass-play-player-card {
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: grid;
+  gap: 14px;
+}
+
+.pass-play-player-card.active {
+  border-color: rgba(143, 176, 255, 0.28);
+}
+
+.pass-play-toggle {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  font-weight: 700;
+}
+
+.pass-play-error {
+  color: #ffd0d0;
+}
+
+.pass-play-status.ready {
+  background: rgba(123, 246, 180, 0.12);
+  border-color: rgba(123, 246, 180, 0.3);
+  color: #c9f7dd;
+}
+
 .results-shell,
 .results-grid,
 .results-summary-grid {
