@@ -1,19 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  buildQuery,
+  buildRouteQuery,
   clampDuration,
   createRandomSeed,
+  decodeSharedGame,
+  encodeSharedGame,
   findWords,
   formatTimer,
   generateBoard,
   normalizeWord,
-  readInitialState,
+  readInitialRouteState,
   scoreWord,
   sortWordsLongestFirst,
+  type AppRouteState,
   type Language,
   type Mode,
   type SetupState,
   type SolverResults,
+  type SharedGameDescriptor,
 } from './game';
 import { useDictionary } from './useDictionary';
 
@@ -127,8 +131,6 @@ type PendingPassPlayAction =
   | { type: 'duration'; durationSeconds: number }
   | { type: 'multiplayer-overview' };
 
-type MultiplayerView = 'overview' | 'pass-play';
-
 const initialPassPlayPlayers = (): PassPlayPlayer[] => [
   { id: 'p1', name: '', active: true },
   { id: 'p2', name: '', active: true },
@@ -197,12 +199,13 @@ function buildPassPlaySummary(
 }
 
 export function App() {
-  const [state, setState] = useState<SetupState>(() => readInitialState());
+  const [state, setState] = useState<AppRouteState>(() => readInitialRouteState());
   const [soloRound, setSoloRound] = useState<SoloRound | null>(null);
   const [wordInput, setWordInput] = useState('');
   const [mobileWordsOpen, setMobileWordsOpen] = useState(false);
   const [guardMessage, setGuardMessage] = useState('');
-  const [multiplayerView, setMultiplayerView] = useState<MultiplayerView>('overview');
+  const [joinInput, setJoinInput] = useState('');
+  const [shareFeedback, setShareFeedback] = useState('');
   const [passPlayPlayers, setPassPlayPlayers] = useState<PassPlayPlayer[]>(() => initialPassPlayPlayers());
   const [passPlayRound, setPassPlayRound] = useState<PassPlayRound | null>(null);
   const [passPlayWordInput, setPassPlayWordInput] = useState('');
@@ -212,11 +215,23 @@ export function App() {
   const dictionary = useDictionary(state.lang);
   const soloTimerRef = useRef<number | null>(null);
   const passPlayTimerRef = useRef<number | null>(null);
+  const buildJoinLink = useCallback((sharedCode: string) => {
+    return `${window.location.origin}${window.location.pathname}?${buildRouteQuery({
+      ...state,
+      mode: 'multiplayer',
+      multiplayerStep: 'lobby',
+      sharedCode,
+      sharedGame: decodeSharedGame(sharedCode).descriptor,
+      sharedError: null,
+    })}`;
+  }, [state]);
 
   useEffect(() => {
     const onPopState = () => {
-      setState(readInitialState());
-      setMultiplayerView('overview');
+      const routeState = readInitialRouteState();
+      setState(routeState);
+      setJoinInput(routeState.sharedCode ? buildJoinLink(routeState.sharedCode) : '');
+      setShareFeedback('');
       setPassPlayPlayers(initialPassPlayPlayers());
       setPassPlayRound(null);
       setPassPlayWordInput('');
@@ -225,7 +240,7 @@ export function App() {
 
     window.addEventListener('popstate', onPopState);
     return () => window.removeEventListener('popstate', onPopState);
-  }, []);
+  }, [buildJoinLink]);
 
   useEffect(() => {
     if (soloRound?.phase !== 'live') {
@@ -346,9 +361,9 @@ export function App() {
     };
   }, [passPlayRound?.phase]);
 
-  function updateState(nextState: SetupState, historyMode: 'push' | 'replace' = 'replace') {
+  function updateState(nextState: AppRouteState, historyMode: 'push' | 'replace' = 'replace') {
     setState(nextState);
-    const query = buildQuery(nextState);
+    const query = buildRouteQuery(nextState);
     const nextUrl = `${window.location.pathname}?${query}`;
 
     if (historyMode === 'push') {
@@ -365,15 +380,15 @@ export function App() {
     setPassPlayWordInput('');
     setPassPlayPlayers(initialPassPlayPlayers());
     setGuardMessage('');
+    setShareFeedback('');
 
     if (action.type === 'multiplayer-overview') {
-      setMultiplayerView('overview');
+      updateState({ ...state, mode: 'multiplayer', multiplayerStep: 'overview', sharedCode: null, sharedGame: null, sharedError: null }, 'push');
       return;
     }
 
     if (action.type === 'mode') {
-      setMultiplayerView('overview');
-      updateState({ ...state, mode: action.mode }, 'push');
+      updateState({ ...state, mode: action.mode, multiplayerStep: 'overview', sharedCode: null, sharedGame: null, sharedError: null }, 'push');
       return;
     }
 
@@ -415,13 +430,92 @@ export function App() {
 
     setGuardMessage('');
     if (patch.mode && patch.mode !== 'multiplayer') {
-      setMultiplayerView('overview');
       setPassPlayPlayers(initialPassPlayPlayers());
       setPassPlayRound(null);
       setPassPlayWordInput('');
+      setJoinInput('');
+      setShareFeedback('');
     }
-    updateState({ ...state, ...patch }, historyMode);
+    updateState({
+      ...state,
+      ...patch,
+      multiplayerStep: patch.mode === 'multiplayer' ? state.multiplayerStep : 'overview',
+      sharedCode: patch.mode === 'multiplayer' ? state.sharedCode : null,
+      sharedGame: patch.mode === 'multiplayer' ? state.sharedGame : null,
+      sharedError: patch.mode === 'multiplayer' ? state.sharedError : null,
+    }, historyMode);
   }
+
+  function openMultiplayerStep(step: AppRouteState['multiplayerStep']) {
+    updateState({
+      ...state,
+      mode: 'multiplayer',
+      multiplayerStep: step,
+      sharedCode: step === 'lobby' ? state.sharedCode : null,
+      sharedGame: step === 'lobby' ? state.sharedGame : null,
+      sharedError: null,
+    }, 'push');
+    setShareFeedback('');
+  }
+
+  function hostSharedGame() {
+    const descriptor: SharedGameDescriptor = {
+      version: 1,
+      lang: state.lang,
+      durationSeconds: state.durationSeconds,
+      seed: createRandomSeed(),
+    };
+    const sharedCode = encodeSharedGame(descriptor);
+    updateState({
+      ...state,
+      mode: 'multiplayer',
+      lang: descriptor.lang,
+      durationSeconds: descriptor.durationSeconds,
+      multiplayerStep: 'lobby',
+      sharedCode,
+      sharedGame: descriptor,
+      sharedError: null,
+    }, 'push');
+    setJoinInput(buildJoinLink(sharedCode));
+    setShareFeedback('');
+  }
+
+  async function copyValue(value: string, successMessage: string) {
+    try {
+      await navigator.clipboard.writeText(value);
+      setShareFeedback(successMessage);
+    } catch {
+      setShareFeedback('Copy failed. Select and copy the text manually.');
+    }
+  }
+
+  function submitJoin() {
+    const decoded = decodeSharedGame(joinInput);
+    if (!decoded.descriptor) {
+      setState((current) => ({ ...current, sharedError: decoded.error }));
+      setShareFeedback('');
+      return;
+    }
+    const sharedCode = encodeSharedGame(decoded.descriptor);
+    updateState({
+      ...state,
+      mode: 'multiplayer',
+      lang: decoded.descriptor.lang,
+      durationSeconds: decoded.descriptor.durationSeconds,
+      multiplayerStep: 'lobby',
+      sharedCode,
+      sharedGame: decoded.descriptor,
+      sharedError: null,
+    }, 'push');
+    setJoinInput(buildJoinLink(sharedCode));
+    setShareFeedback('');
+  }
+
+  useEffect(() => {
+    if (state.sharedCode && state.multiplayerStep === 'lobby') {
+      setJoinInput(buildJoinLink(state.sharedCode));
+    }
+  }, [buildJoinLink, state.sharedCode, state.multiplayerStep]);
 
   function startSoloRound() {
     const seed = createRandomSeed();
@@ -749,7 +843,8 @@ export function App() {
   const passPlayRosterReady = activePassPlayPlayers.length >= 2 && passPlayPlayerErrors.size === 0;
   const activePassPlayPlayer = passPlayRound?.playerOrder[passPlayRound.activePlayerIndex] ?? null;
   const activePassPlayRecord = activePassPlayPlayer ? passPlayRound?.turnRecords[activePassPlayPlayer.id] : null;
-  const showPassPlayActiveRound = state.mode === 'multiplayer' && multiplayerView === 'pass-play' && passPlayRound !== null;
+  const showPassPlayActiveRound =
+    state.mode === 'multiplayer' && state.multiplayerStep === 'pass-play' && passPlayRound !== null;
   const passPlaySummary =
     passPlayRound?.phase === 'round-complete'
       ? buildPassPlaySummary(
@@ -757,6 +852,9 @@ export function App() {
           dictionary.state === 'ready' && dictionary.trie ? findWords(passPlayRound.board, dictionary.trie) : null,
         )
       : null;
+  const sharedLobbyBoard = state.sharedGame ? generateBoard(state.sharedGame.lang, state.sharedGame.seed) : null;
+  const sharedJoinLink = state.sharedCode ? buildJoinLink(state.sharedCode) : '';
+  const sharedLobbyLocked = state.mode === 'multiplayer' && state.multiplayerStep === 'lobby' && Boolean(state.sharedGame);
 
   return (
     <main className={`app-shell${mobileSoloFocus ? ' mobile-solo-focus' : ''}`}>
@@ -793,7 +891,11 @@ export function App() {
                     type="button"
                     className={`mode-card${active ? ' active' : ''}`}
                     aria-pressed={active}
-                    onClick={() => patchState({ mode }, 'push')}
+                    onClick={() => {
+                      if (!active) {
+                        patchState({ mode }, 'push');
+                      }
+                    }}
                   >
                     <span className="mode-eyebrow">{copy.eyebrow}</span>
                     <span className="mode-title">{copy.title}</span>
@@ -826,6 +928,7 @@ export function App() {
               <select
                 aria-label="Language"
                 value={state.lang}
+                disabled={sharedLobbyLocked}
                 onChange={(event) => patchState({ lang: event.target.value as Language })}
               >
                 {languageOptions.map((option) => (
@@ -842,6 +945,7 @@ export function App() {
                 <button
                   type="button"
                   className="secondary-button"
+                  disabled={sharedLobbyLocked}
                   onClick={() =>
                     patchState({ durationSeconds: clampDuration(state.durationSeconds - 60) })
                   }
@@ -852,6 +956,7 @@ export function App() {
                 <button
                   type="button"
                   className="secondary-button"
+                  disabled={sharedLobbyLocked}
                   onClick={() =>
                     patchState({ durationSeconds: clampDuration(state.durationSeconds + 60) })
                   }
@@ -1133,17 +1238,18 @@ export function App() {
             <div className="status-card">
               <div className="eyebrow">{selectedModeCopy.eyebrow}</div>
               <h3>{selectedModeCopy.title} setup</h3>
-              {state.mode === 'multiplayer' && multiplayerView === 'overview' ? (
+              {state.mode === 'multiplayer' && state.multiplayerStep === 'overview' ? (
                 <div className="multiplayer-branch-shell">
                   <p className="hero-copy">
-                    Choose the multiplayer branch first so same-device pass-and-play stays distinct
-                    from backend-free shared-code hosting and joining.
+                    Multiplayer keeps same-device pass-and-play separate from backend-free shared
+                    hosting. Hosts can create a code before play starts, and guests can paste a raw
+                    code or full link into the same join field.
                   </p>
                   <div className="multiplayer-branch-grid">
                     <button
                       type="button"
                       className="mode-card multiplayer-branch-card"
-                      onClick={() => setMultiplayerView('pass-play')}
+                      onClick={() => openMultiplayerStep('pass-play')}
                     >
                       <span className="mode-eyebrow">Same device</span>
                       <span className="mode-title">Pass-and-play on this device</span>
@@ -1152,19 +1258,162 @@ export function App() {
                         answers private to this device.
                       </span>
                     </button>
-                    <button type="button" className="mode-card multiplayer-branch-card">
+                    <button type="button" className="mode-card multiplayer-branch-card" onClick={hostSharedGame}>
                       <span className="mode-eyebrow">Shared code</span>
-                      <span className="mode-title">Host or join with a shared code</span>
+                      <span className="mode-title">Host a shared round</span>
                       <span className="mode-description">
-                        Shared-code hosting and joining stays separate from private pass-and-play
-                        roster setup.
+                        Generate a backend-free round code and link that other phones can open
+                        before anyone starts playing.
                       </span>
+                    </button>
+                  </div>
+                  <div className="status-card shared-join-card">
+                    <div className="eyebrow">Join a shared round</div>
+                    <h3>Paste a code or full link</h3>
+                    <p className="hero-copy">
+                      The shared code defines the round. Joining does not require the host to stay
+                      open, and invalid input stays inline on this screen.
+                    </p>
+                    <label className="field">
+                      <span>Shared code or join link</span>
+                      <input
+                        aria-label="Shared code or join link"
+                        value={joinInput}
+                        onChange={(event) => {
+                          setJoinInput(event.target.value);
+                          if (state.sharedError) {
+                            setState((current) => ({ ...current, sharedError: null }));
+                          }
+                        }}
+                        placeholder="Paste ABC-ENG-... or a full https:// link"
+                      />
+                    </label>
+                    {state.sharedError ? (
+                      <div className="guard-banner" data-testid="shared-join-error">
+                        {state.sharedError}
+                      </div>
+                    ) : null}
+                    <div className="action-row">
+                      <button type="button" className="primary-button" onClick={submitJoin}>
+                        Join shared round
+                      </button>
+                      <button type="button" className="secondary-button" onClick={() => openMultiplayerStep('join')}>
+                        Open join helper
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {state.mode === 'multiplayer' && state.multiplayerStep === 'join' ? (
+                <div className="status-card shared-join-card">
+                  <div className="eyebrow">Shared join</div>
+                  <h3>Join with a raw code or full link</h3>
+                  <p className="hero-copy">
+                    Paste either format here. If the code is valid, the lobby will preview the same
+                    language, board size, and duration that every participant shares.
+                  </p>
+                  <label className="field">
+                    <span>Shared code or join link</span>
+                    <input
+                      aria-label="Shared code or join link"
+                      value={joinInput}
+                      onChange={(event) => {
+                        setJoinInput(event.target.value);
+                        if (state.sharedError) {
+                          setState((current) => ({ ...current, sharedError: null }));
+                        }
+                      }}
+                      placeholder="Paste the host code or join link"
+                    />
+                  </label>
+                  {state.sharedError ? (
+                    <div className="guard-banner" data-testid="shared-join-error">
+                      {state.sharedError}
+                    </div>
+                  ) : null}
+                  <div className="action-row">
+                    <button type="button" className="primary-button" onClick={submitJoin}>
+                      Join shared round
+                    </button>
+                    <button type="button" className="secondary-button" onClick={() => openMultiplayerStep('overview')}>
+                      Cancel
                     </button>
                   </div>
                 </div>
               ) : null}
 
-              {state.mode === 'multiplayer' && multiplayerView === 'pass-play' && !showPassPlayActiveRound ? (
+              {state.mode === 'multiplayer' && state.multiplayerStep === 'lobby' && state.sharedGame ? (
+                <div className="shared-lobby-shell" data-testid="shared-lobby">
+                  <div className="pass-play-heading-row">
+                    <div>
+                      <div className="eyebrow">Shared lobby</div>
+                      <h3>Shared round ready before start</h3>
+                    </div>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => openMultiplayerStep('overview')}
+                    >
+                      Back to multiplayer
+                    </button>
+                  </div>
+                  <p className="hero-copy">
+                    This round is seed-synced, not live room-synced. Everyone gets the same round
+                    definition, but each device starts locally when ready.
+                  </p>
+                  <div className="results-summary-grid">
+                    <div className="summary-pill" data-testid="shared-code-pill">Code: {state.sharedCode}</div>
+                    <div className="summary-pill">Language: {languageOptions.find((option) => option.value === state.sharedGame?.lang)?.label}</div>
+                    <div className="summary-pill">Board: {sharedLobbyBoard?.rows}×{sharedLobbyBoard?.cols}</div>
+                    <div className="summary-pill">Timer: {Math.floor(state.sharedGame.durationSeconds / 60)} min</div>
+                  </div>
+                  <label className="field">
+                    <span>Shareable link</span>
+                    <input aria-label="Shareable link" readOnly value={sharedJoinLink} />
+                  </label>
+                  <div className="action-row">
+                    <button
+                      type="button"
+                      className="primary-button"
+                      onClick={() => void copyValue(state.sharedCode ?? '', 'Copied shared code.')}
+                    >
+                      Copy code
+                    </button>
+                    <button
+                      type="button"
+                      className="secondary-button"
+                      onClick={() => void copyValue(sharedJoinLink, 'Copied join link.')}
+                    >
+                      Copy link
+                    </button>
+                  </div>
+                  {shareFeedback ? (
+                    <div className="guard-banner shared-feedback" data-testid="shared-copy-feedback">
+                      {shareFeedback}
+                    </div>
+                  ) : null}
+                  <div className="status-card">
+                    <div className="eyebrow">Pre-start preview</div>
+                    <p className="hero-copy">
+                      Local setup controls stay locked to prevent drift away from the shared round
+                      identity. Leave this flow if you want different settings.
+                    </p>
+                    <div
+                      className="solo-board"
+                      style={{ gridTemplateColumns: `repeat(${sharedLobbyBoard?.cols ?? 4}, minmax(0, 1fr))` }}
+                    >
+                      {sharedLobbyBoard?.cells.map((cell) => (
+                        <div key={cell.id} className="board-cell" data-testid="board-cell">
+                          {cell.value}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
+              {state.mode === 'multiplayer' && state.multiplayerStep === 'pass-play' && !showPassPlayActiveRound ? (
                 <div className="pass-play-setup-shell">
                   <div className="pass-play-heading-row">
                     <div>
@@ -1175,8 +1424,8 @@ export function App() {
                       type="button"
                       className="secondary-button"
                       onClick={() => {
-                        setMultiplayerView('overview');
                         setPassPlayPlayers(initialPassPlayPlayers());
+                        openMultiplayerStep('overview');
                       }}
                     >
                       Back to multiplayer
@@ -1451,7 +1700,7 @@ export function App() {
                           className="secondary-button"
                           onClick={() => {
                             resetPassPlayRound();
-                            setMultiplayerView('overview');
+                            openMultiplayerStep('overview');
                           }}
                         >
                           Back to multiplayer
@@ -1486,16 +1735,16 @@ export function App() {
         <div className="panel-heading">
           <h2>URL-backed setup</h2>
           <p>
-            Refreshing or deep-linking with safe setup params restores this home surface without
-            auto-starting a round.
+            Refreshing or deep-linking with safe setup params restores this home surface. Shared
+            `g=` links reopen the same multiplayer lobby instead of a random board.
           </p>
         </div>
         <div className="placeholder-card">
           <p>
-            Safe params persist for language, timer, and selected home mode only. No board, score,
-            word entry, or results state appears before play begins.
+            Safe params persist for language, timer, and selected home mode only unless a shared
+            code is present. Private pass-and-play state never enters the URL.
           </p>
-          <code>{window.location.pathname}?{buildQuery(state)}</code>
+          <code>{window.location.pathname}?{buildRouteQuery(state)}</code>
         </div>
       </section>
     </main>
