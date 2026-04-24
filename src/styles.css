@@ -414,13 +414,35 @@ select {
 
 .pass-play-handoff-card,
 .pass-play-turn-complete-card,
-.pass-play-abandon-guard {
+.pass-play-abandon-guard,
+.pass-play-summary-card {
   display: grid;
   gap: 16px;
 }
 
 .pass-play-live-shell {
   gap: 16px;
+}
+
+.pass-play-summary-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.pass-play-player-summary-card {
+  border-radius: 18px;
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: grid;
+  gap: 14px;
+}
+
+.pass-play-winner-banner {
+  background: rgba(123, 246, 180, 0.12);
+  border-color: rgba(123, 246, 180, 0.3);
+  color: #d8ffe7;
 }
 
 .pass-play-active-words-card {

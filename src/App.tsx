@@ -89,6 +89,27 @@ type PassPlayTurnRecord = {
   wordSet: Set<string>;
 };
 
+type PassPlayWordResolution = {
+  word: string;
+  state: 'accepted' | 'duplicate' | 'invalid';
+  reason: string;
+  points: number;
+};
+
+type PassPlayPlayerSummary = {
+  playerId: string;
+  playerName: string;
+  words: PassPlayWordResolution[];
+  totalScore: number;
+};
+
+type PassPlaySummary = {
+  players: PassPlayPlayerSummary[];
+  topScore: number;
+  winners: string[];
+  duplicateWords: Set<string>;
+};
+
 type PassPlayRound = {
   seed: number;
   board: ReturnType<typeof generateBoard>;
@@ -114,6 +135,66 @@ const initialPassPlayPlayers = (): PassPlayPlayer[] => [
   { id: 'p3', name: '', active: false },
   { id: 'p4', name: '', active: false },
 ];
+
+function buildPassPlaySummary(
+  round: PassPlayRound,
+  solverResults: SolverResults | null,
+): PassPlaySummary {
+  const wordCounts = new Map<string, number>();
+
+  Object.values(round.turnRecords).forEach((record) => {
+    record.words.forEach((word) => {
+      wordCounts.set(word, (wordCounts.get(word) ?? 0) + 1);
+    });
+  });
+
+  const duplicateWords = new Set(
+    [...wordCounts.entries()].filter(([, count]) => count > 1).map(([word]) => word),
+  );
+
+  const players = round.playerOrder.map((player) => {
+    const record = round.turnRecords[player.id];
+    const words = record.words.map((word) => {
+      if (duplicateWords.has(word)) {
+        return {
+          word,
+          state: 'duplicate',
+          reason: 'Duplicate word',
+          points: 0,
+        } satisfies PassPlayWordResolution;
+      }
+
+      const valid = solverResults?.found.has(word) ?? false;
+      if (!valid) {
+        return {
+          word,
+          state: 'invalid',
+          reason: 'Invalid word',
+          points: 0,
+        } satisfies PassPlayWordResolution;
+      }
+
+      return {
+        word,
+        state: 'accepted',
+        reason: 'Accepted',
+        points: scoreWord(word),
+      } satisfies PassPlayWordResolution;
+    });
+
+    return {
+      playerId: player.id,
+      playerName: player.name,
+      words,
+      totalScore: words.reduce((total, row) => total + row.points, 0),
+    } satisfies PassPlayPlayerSummary;
+  });
+
+  const topScore = Math.max(0, ...players.map((player) => player.totalScore));
+  const winners = players.filter((player) => player.totalScore === topScore).map((player) => player.playerName);
+
+  return { players, topScore, winners, duplicateWords };
+}
 
 export function App() {
   const [state, setState] = useState<SetupState>(() => readInitialState());
@@ -487,6 +568,14 @@ export function App() {
     });
   }
 
+  function resetPassPlayRound() {
+    setPendingPassPlayAction(null);
+    setPassPlayRound(null);
+    setPassPlayPlayers(initialPassPlayPlayers());
+    setPassPlayWordInput('');
+    setGuardMessage('');
+  }
+
   function startPassPlayTurn() {
     setPassPlayWordInput('');
     setPassPlayRound((current) => {
@@ -661,6 +750,13 @@ export function App() {
   const activePassPlayPlayer = passPlayRound?.playerOrder[passPlayRound.activePlayerIndex] ?? null;
   const activePassPlayRecord = activePassPlayPlayer ? passPlayRound?.turnRecords[activePassPlayPlayer.id] : null;
   const showPassPlayActiveRound = state.mode === 'multiplayer' && multiplayerView === 'pass-play' && passPlayRound !== null;
+  const passPlaySummary =
+    passPlayRound?.phase === 'round-complete'
+      ? buildPassPlaySummary(
+          passPlayRound,
+          dictionary.state === 'ready' && dictionary.trie ? findWords(passPlayRound.board, dictionary.trie) : null,
+        )
+      : null;
 
   return (
     <main className={`app-shell${mobileSoloFocus ? ' mobile-solo-focus' : ''}`}>
@@ -1290,12 +1386,77 @@ export function App() {
                   ) : null}
 
                   {passPlayRound.phase === 'round-complete' ? (
-                    <div className="status-card pass-play-turn-complete-card" data-testid="pass-play-round-complete">
+                    <div className="status-card pass-play-summary-card" data-testid="pass-play-summary">
                       <div className="eyebrow">All turns complete</div>
-                      <h3>Every player finished one private turn.</h3>
+                      <h3>Pass-and-play round summary</h3>
                       <p className="hero-copy">
-                        The shared board stayed fixed and each turn used a fresh timer. The detailed summary lands in the next slice.
+                        The board stayed fixed for every turn, each player got a fresh full timer,
+                        and the final scores resolve accepted, duplicate, and invalid entries side by side.
                       </p>
+
+                      <div className="results-summary-grid">
+                        <div className="summary-pill">Board seed: {passPlayRound.seed}</div>
+                        <div className="summary-pill">Players: {passPlayRound.playerOrder.length}</div>
+                        <div className="summary-pill">Dictionary: {dictionary.message}</div>
+                      </div>
+
+                      <div className="guard-banner pass-play-winner-banner" data-testid="pass-play-winner-banner">
+                        {passPlaySummary && passPlaySummary.winners.length === 1
+                          ? `${passPlaySummary.winners[0]} wins with ${passPlaySummary.topScore} point${passPlaySummary.topScore === 1 ? '' : 's'}.`
+                          : `It’s a tie at ${passPlaySummary?.topScore ?? 0} points — co-winners: ${passPlaySummary?.winners.join(', ') ?? 'Everyone'}.`}
+                      </div>
+
+                      <div className="pass-play-summary-grid">
+                        {passPlaySummary?.players.map((player) => (
+                          <section
+                            key={player.playerId}
+                            className="pass-play-player-summary-card"
+                            data-testid={`pass-play-player-summary-${player.playerName}`}
+                          >
+                            <div className="pass-play-player-header">
+                              <div>
+                                <div className="eyebrow">Player summary</div>
+                                <h4>{player.playerName}</h4>
+                              </div>
+                              <div className="summary-pill">{player.totalScore} pts</div>
+                            </div>
+
+                            <ul className="results-word-list">
+                              {player.words.length > 0 ? (
+                                player.words.map((row) => (
+                                  <li key={`${player.playerId}-${row.word}`} className="player-result-row">
+                                    <strong>{row.word}</strong>
+                                    <span className={`result-state-pill ${row.state === 'accepted' ? 'valid' : 'invalid'}`}>
+                                      {row.reason}
+                                    </span>
+                                    <span className="player-result-points">
+                                      {row.points} pt{row.points === 1 ? '' : 's'}
+                                    </span>
+                                  </li>
+                                ))
+                              ) : (
+                                <li className="word-list-empty">No words entered.</li>
+                              )}
+                            </ul>
+                          </section>
+                        ))}
+                      </div>
+
+                      <div className="action-row">
+                        <button type="button" className="primary-button" onClick={resetPassPlayRound}>
+                          Play another pass-and-play round
+                        </button>
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          onClick={() => {
+                            resetPassPlayRound();
+                            setMultiplayerView('overview');
+                          }}
+                        >
+                          Back to multiplayer
+                        </button>
+                      </div>
                     </div>
                   ) : null}
                 </div>
